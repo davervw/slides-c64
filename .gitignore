@@ -1,0 +1,7 @@
+.DS_Store
+build/labels
+bin/win/acme.exe
+bin/win/exobasic.exe
+bin/win/exomizer.exe
+bin/win/pucrunch.exe
+*.prg
