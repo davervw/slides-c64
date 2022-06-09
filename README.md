@@ -1,6 +1,41 @@
-# SLIDES - README
+# SLIDES for Commodore 64
 
-Source code is 6502 assembler targeting Commodore 64
+This project started so I could self-host a presentation from a Commodore 64 emulator about said [emulator](https://github.com/davervw/simple-emu-c64).  
+
+![Presentation](https://github.com/davervw/slides-c64/raw/master/slides.gif)
+
+Low resolution PETSCII graphics machine language support has five entry points.  
+
+    SYS 49152,X,Y : REM to plot using the quad-character PETSCII graphics 80x50 on 40x25 screen using POKEs
+    SYS 49155,X,Y,V-1 : REM plot vertical line V pixels (80x50) high using POKEs
+    SYS 49158,X,Y,H-1 : REM plot horizontal line H pixels (80x50) wide using POKEs
+    SYS 49161,"Hello" : REM draw big text (4x4 characters) using lores pixels using character out
+    SYS 49164,X,Y : REM locate text cursor on 40x25 screen using HOME/LEFT/DOWN characters out
+
+Slides are defined in BASIC DATA statements.
+
+    DATA "!B6" : REM background color 6
+    DATA "!D12" : REM border color 12
+    DATA "!F3"  : REM foreground color 3
+    DATA "!." : REM horizontal line
+    DATA "!-" : REM new slide
+    DATA "!C" : REM center align text
+    DATA "!L" : REM left align text
+    DATA "!E" : REM end of slides
+    DATA "TEXT" : REM display string TEXT using large 4x4 font
+    DATA "-TEXT" : REM use standard size font
+    DATA "" : REM blank line
+
+User can use left/right cursor keys to navigate, and number keys to jump to page, advances on other keys
+
+Source code is 6502 assembler and BASIC targeting Commodore 64
+
+![Slides directory](https://github.com/davervw/slides-c64/raw/master/slides.png)
+
+![Lores demo](https://github.com/davervw/slides-c64/raw/master/slides2.png)
+LORES DEMO program
 
 Requires bin/win/[acme.exe](https://sourceforge.net/projects/acme-crossass/) and bin/win/c1541.exe from [Vice](http://vice-emu.sourceforge.net/index.html#download)
 and revise build.sh to use more Vice executables for building and launching
+
+[Slides.D64](https://github.com/davervw/slides-c64/raw/master/build/slides.d64) disk image
