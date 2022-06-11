@@ -1,9 +1,27 @@
+Content and Program are released with different licenses
+
+In other words, you can make your own slides for your own presentation.
+You are not allowed to present my sample slides as your own content.
+Change the content, and you're good to go.
+
+===================================================================================
+
 Slides for C64 
 
-MIT License
-
+Presentation Slides DATA Content
 Copyright (c) 2022 David R. Van Wagner
 davevw.com
+ALL RIGHTS RESERVED
+Content of slides DATA may not be duplicated in whole or in part
+without expressed permission by copyright holder
+
+==================================================================================
+
+Slides program (engine) for Commodore 64
+Copyright (c) 2022 David R. Van Wagner
+davevw.com
+
+MIT License
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
