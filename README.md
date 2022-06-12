@@ -4,13 +4,24 @@ This project started so I could self-host a presentation from a Commodore 64 emu
 
 ![Presentation](https://github.com/davervw/slides-c64/raw/master/slides.gif)
 
-Low resolution PETSCII graphics machine language support has five entry points.  
+Example slide definition:
 
-    SYS 49152,X,Y : REM to plot using the quad-character PETSCII graphics 80x50 on 40x25 screen using POKEs
-    SYS 49155,X,Y,V-1 : REM plot vertical line V pixels (80x50) high using POKEs
-    SYS 49158,X,Y,H-1 : REM plot horizontal line H pixels (80x50) wide using POKEs
-    SYS 49161,"Hello" : REM draw big text (4x4 characters) using lores pixels using character out
-    SYS 49164,X,Y : REM locate text cursor on 40x25 screen using HOME/LEFT/DOWN characters out
+    4000 DATA "!-"
+    4050 DATA "!C
+    4100 DATA "!F7
+    4150 DATA ""
+    4200 DATA "HISTORY"
+    4250 DATA ""
+    4300 DATA "!F15"
+    4350 DATA "!L"
+    4400 DATA "-   * GOAL: MINIMAL IMPLEMENTATION"
+    4450 DATA ""
+    4500 DATA "-   * PUZZLE: JUST BASIC?
+    4550 DATA "-   * PUZZLE: 6502 EMULATOR
+    4600 DATA ""
+    4650 DATA "-   * EMULATOR PLAYGROUND"
+    4700 DATA "-   * WHAT IFS"
+    4750 DATA "!-"
 
 Slides are defined in BASIC DATA statements.
 
@@ -29,6 +40,14 @@ Slides are defined in BASIC DATA statements.
 User can use left/right cursor keys to navigate, and number keys to jump to page, advances on other keys
 
 Source code is 6502 assembler and BASIC targeting Commodore 64
+
+Low resolution PETSCII graphics machine language support has five entry points.  
+
+    SYS 49152,X,Y : REM to plot using the quad-character PETSCII graphics 80x50 on 40x25 screen using POKEs
+    SYS 49155,X,Y,V-1 : REM plot vertical line V pixels (80x50) high using POKEs
+    SYS 49158,X,Y,H-1 : REM plot horizontal line H pixels (80x50) wide using POKEs
+    SYS 49161,"Hello" : REM draw big text (4x4 characters) using lores pixels using character out
+    SYS 49164,X,Y : REM locate text cursor on 40x25 screen using HOME/LEFT/DOWN characters out
 
 ![Slides directory](https://github.com/davervw/slides-c64/raw/master/slides.png)
 
