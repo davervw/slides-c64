@@ -171,44 +171,13 @@ buffer_char_bitmap ; .A = char, .X = dest offset, .Y = 0
         lda #$D0
         adc $ff
         sta $ff
-        lda ($fe),y
+-       lda ($fe),y
         sta charrom_buffer, x
         iny
         inx
-        lda ($fe),y
-        sta charrom_buffer, x
-        iny
-        inx
-        lda ($fe),y
-        sta charrom_buffer, x
-        iny
-        inx
-        lda ($fe),y
-        sta charrom_buffer, x
-        iny
-        inx
-        lda ($fe),y
-        sta charrom_buffer, x
-        iny
-        inx
-        lda ($fe),y
-        sta charrom_buffer, x
-        iny
-        inx
-        lda ($fe),y
-        sta charrom_buffer, x
-        iny
-        inx
-        lda ($fe),y
-        sta charrom_buffer, x
-        inx
-        dey
-        dey
-        dey
-        dey
-        dey
-        dey
-        dey
+        cpy #8
+        bne -
+        ldy #0
         rts
 
 draw_lores_char_bitmaps ; input $fd length 1..10, charrom_buffer filled 8..80 bitmaps
@@ -306,7 +275,7 @@ lores_plot ; input .X (0..79), .Y (0..49)
         lda ($fb),y
         jsr find_in_lores_codes
         pha
-        jsr compute_bitmask
+        jsr compute_bit
         pla
         ora power2, x
         tax
@@ -363,7 +332,7 @@ find_in_lores_codes
 +       txa
         rts
 
-compute_bitmask ; 2^((x and 1) + 2*(y and 1))
+compute_bit ; 2*(y and 1)) + (x and 1)
         lda y_coord
         and #1
         asl
