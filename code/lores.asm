@@ -20,6 +20,7 @@ getbytc=$b79b ; parse byte expression from BASIC input
         jmp sys_lores_right
         jmp sys_big_text_print
         jmp sys_locate_print
+        jmp sys_lores_to
 
 sys_lores_plot
         jsr getbytc
@@ -27,6 +28,14 @@ sys_lores_plot
         jsr getbytc
         stx y_coord
         jsr lores_plot
+        rts
+
+sys_lores_to
+        jsr getbytc
+        stx x2_coord
+        jsr getbytc
+        stx y2_coord
+        jsr lores_to
         rts
 
 sys_lores_down
@@ -370,10 +379,99 @@ bank_select
         sta $01
         rts
 
+lores_to
+        lda #0
+        sta distance
+        jsr get_slope ; C=1: Y diff is greater, C=0: X diff is greater; results in x_diff, y_diff
+        bcs ++
+
+        ; increment/decrement along X axis, Y uses slope, increments ocassionally
+        lda x_coord
+-       clc
+        adc x_sign
+        sta x_coord
+        lda y_diff
+        clc
+        adc distance
+        sta distance
+        sec
+        sbc x_diff
+        bcc +
+        sta distance
+        lda y_coord
+        clc
+        adc y_sign
+        sta y_coord
++       jsr lores_plot
+        lda x_coord
+        cmp x2_coord
+        bne -
+        beq +++ ; done
+
+++      ; increment/decrement along Y axis, X uses slope
+        lda y_diff
+        beq +++ ; nothing to do, same points, so done
+        lda y_coord
+-       clc
+        adc y_sign
+        sta y_coord
+        lda x_diff
+        clc
+        adc distance
+        sta distance
+        sec
+        sbc y_diff
+        bcc +
+        sta distance
+        lda x_coord
+        clc
+        adc x_sign
+        sta x_coord
++       jsr lores_plot
+        lda y_coord
+        cmp y2_coord
+        bne -
+        beq +++ ; done
+
++++     rts
+
+get_slope
+        lda #1
+        sta x_sign
+        sta y_sign
+        lda x2_coord
+        sec
+        sbc x_coord
+        sta x_diff
+        bpl +
+        dec x_sign ; zero
+        dec x_sign ; -1
+        lda #0
+        sbc x_diff
+        sta x_diff ; absolute value
++       lda y2_coord
+        sec
+        sbc y_coord
+        sta y_diff
+        bpl +
+        dec y_sign ; zero
+        dec y_sign ; -1
+        lda #0
+        sbc y_diff
+        sta y_diff ; absolute value
++       cmp x_diff ; compare absolute values, C=1 if y_diff > x_diff
+        rts
+
 my_bank !byte 0
 
 x_coord !byte 0
 y_coord !byte 0
+x2_coord !byte 0
+y2_coord !byte 0
+x_diff !byte 0 ; 0..79
+y_diff !byte 0 ; 0..49
+x_sign !byte 0 ; signed 1 or -1
+y_sign !byte 0 ; signed 1 or -1
 distance !byte 0
 charrvs !byte 0
 
