@@ -21,6 +21,7 @@ getbytc=$b79b ; parse byte expression from BASIC input
         jmp sys_big_text_print
         jmp sys_locate_print
         jmp sys_lores_to
+        jmp sys_set_plot
 
 sys_lores_plot
         jsr getbytc
@@ -105,6 +106,16 @@ sys_locate_print
         jsr $ffd2
         dex
         bne -
+        rts
+
+sys_set_plot
+        jsr getbytc
+        ldy #$80
+        txa
+        and #1
+        beq +
+        ldy #$0
++       sty unplot_flag
         rts
 
 buffer_char_bitmaps
@@ -287,7 +298,10 @@ lores_plot ; input .X (0..79), .Y (0..49)
         jsr compute_bit
         pla
         ora power2, x
-        tax
+        bit unplot_flag
+        bpl +
+        eor power2, x
++       tax
         lda lores_codes, x
         ldy #0
         sta ($fb),y
@@ -297,7 +311,7 @@ lores_plot ; input .X (0..79), .Y (0..49)
         sta $fc
         lda 646
         sta ($fb),y
-        rts
++++     rts
 
 compute_screen_address; 1024+int(x/2)+40*int(y/2)
         lda #0
@@ -472,6 +486,8 @@ x_diff !byte 0 ; 0..79
 y_diff !byte 0 ; 0..49
 x_sign !byte 0 ; signed 1 or -1
 y_sign !byte 0 ; signed 1 or -1
+unplot_flag !byte 0 ; 0=off, 128=on
+
 distance !byte 0
 charrvs !byte 0
 
