@@ -48,7 +48,8 @@ Low resolution PETSCII graphics machine language support has five entry points.
     SYS 49158,X,Y,H-1 : REM plot horizontal line H pixels (80x50) wide using POKEs
     SYS 49161,"Hello" : REM draw big text (4x4 characters) using lores pixels using character out
     SYS 49164,X,Y : REM locate text cursor on 40x25 screen using HOME/LEFT/DOWN characters out
-
+    SYS 49167,X,Y : REM draw line to 80x50 position using quad-character PETSCII graphics PEEK/POKEs
+    
 ![Slides directory](https://github.com/davervw/slides-c64/raw/master/slides.png)
 
 ![Lores demo](https://github.com/davervw/slides-c64/raw/master/slides2.png)
