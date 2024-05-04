@@ -55,7 +55,7 @@ Low resolution PETSCII graphics machine language support has five entry points.
 ![Lores demo](https://github.com/davervw/slides-c64/raw/master/slides2.png)
 LORES DEMO program
 
-Requires bin/win/[acme.exe](https://sourceforge.net/projects/acme-crossass/) and bin/win/c1541.exe from [Vice](http://vice-emu.sourceforge.net/index.html#download)
-and revise build.sh to use more Vice executables for building and launching
+Building requires bin/win/[acme.exe](https://sourceforge.net/projects/acme-crossass/) and bin/win/c1541.exe from [Vice](http://vice-emu.sourceforge.net/index.html#download)
+and revise build.sh to use more Vice executables. 
 
 [Slides.D64](https://github.com/davervw/slides-c64/raw/master/build/slides.d64) disk image
