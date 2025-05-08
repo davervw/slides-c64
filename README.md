@@ -49,7 +49,9 @@ Low resolution PETSCII graphics machine language support has five entry points.
     SYS 49161,"Hello" : REM draw big text (4x4 characters) using lores pixels using character out
     SYS 49164,X,Y : REM locate text cursor on 40x25 screen using HOME/LEFT/DOWN characters out
     SYS 49167,X,Y : REM draw line to 80x50 position using quad-character PETSCII graphics PEEK/POKEs
-    
+
+Note that the big text entry supports control characters (18/146, 14/142) for reverse on/off and lowercase on/off and a sample program "BIG EDITOR" is included to demonstrate typing big text on the screen with cursor control, colors, etc.
+
 ![Slides directory](https://github.com/davervw/slides-c64/raw/master/slides.png)
 
 ![Lores demo](https://github.com/davervw/slides-c64/raw/master/slides2.png)

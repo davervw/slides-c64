@@ -129,16 +129,52 @@ buffer_char_bitmaps
         jsr bank_charrom
         ldy #0
         ldx #0
+        stx charrvs
+        stx lowercase
 -       lda ($fb),y
+        jsr check_control_code
+        bcc +
         jsr petscii_to_screencode
         jsr buffer_char_bitmap ; .A=char, .X=offset of destination (auto advance)
-        inc $fb
++       inc $fb
         bne +
         inc $fc
 +       dec buffer_char_bitmaps_counter
         bne -
         jsr bank_norm
         cli
+        rts
+
+check_control_code
+        stx savex
+        cmp #$20
+        bcc ++
+        cmp #$80
+        bcc +
+        cmp #$a0
+        bcc ++
++       sec
+        bcs +++
+++      dec $fd
++++     php
+        cmp #$12
+        bne +
+        ldx #$80
+        stx charrvs
++       cmp #$92
+        bne +
+        ldx #0
+        stx charrvs
++       cmp #$0e
+        bne +
+        ldx #$80
+        stx lowercase
++       cmp #$8e
+        bne +
+        ldx #0
+        stx lowercase
++       ldx savex
+        plp
         rts
 
 petscii_to_screencode 
@@ -190,7 +226,10 @@ buffer_char_bitmap ; .A = char, .X = dest offset, .Y = 0
         clc
         lda #$D0
         adc $ff
-        sta $ff
+        bit lowercase
+        bpl +
+        adc #$08
++       sta $ff       
 -       lda ($fe),y
         sta charrom_buffer, x
         iny
@@ -488,8 +527,11 @@ x_sign !byte 0 ; signed 1 or -1
 y_sign !byte 0 ; signed 1 or -1
 unplot_flag !byte 0 ; 0=off, 128=on
 
+savex !byte 0
+
 distance !byte 0
 charrvs !byte 0
+lowercase !byte 0
 
 buffer_char_bitmaps_counter !byte 0
 draw_line_counter !byte 0
