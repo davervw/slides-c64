@@ -123,10 +123,6 @@ buffer_char_bitmaps
         and #$f
         sta curcolor
         lda $fd
-        cmp #31 ; check length too big
-        bcc +
-        lda #30 ; truncate length, so don't overrun buffers
-        sta $fd
 +       sta buffer_char_bitmaps_counter
         sei
         jsr bank_charrom
@@ -142,13 +138,15 @@ buffer_char_bitmaps
 +       inc $fb
         bne +
         inc $fc
-+       dec buffer_char_bitmaps_counter
++       cpx #30 ; at buffer limit?
+        beq +
+        dec buffer_char_bitmaps_counter
         bne -
-        jsr bank_norm
++       jsr bank_norm
         cli
         rts
 
-check_control_code
+check_control_code: ; return .C=0 if control code =1 if not
         stx savex
         cmp #$20
         bcc ++
