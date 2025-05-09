@@ -119,6 +119,9 @@ sys_set_plot
         rts
 
 buffer_char_bitmaps
+        lda 646
+        and #$f
+        sta curcolor
         lda $fd
         cmp #31 ; check length too big
         bcc +
@@ -155,7 +158,7 @@ check_control_code
         bcc ++
 +       sec
         bcs +++
-++      dec $fd
+++      dec $fd ; one less printable character
 +++     php
         cmp #$12
         bne +
@@ -173,7 +176,14 @@ check_control_code
         bne +
         ldx #0
         stx lowercase
-+       ldx savex
++       ldx #15
+-       cmp color_codes, x
+        bne +
+        stx curcolor
+        bpl ++
++       dex
+        bpl -
+++      ldx savex
         plp
         rts
 
@@ -236,6 +246,14 @@ buffer_char_bitmap ; .A = char, .X = dest offset, .Y = 0
         inx
         cpy #8
         bne -
+        txa
+        lsr
+        lsr
+        lsr
+        tay
+        dey
+        lda curcolor
+        sta color_buffer, y
         ldy #0
         rts
 
@@ -248,11 +266,13 @@ draw_lores_char_bitmaps ; input $fd length 1..10, charrom_buffer filled 8..80 bi
         bne -
         rts
 
-draw_lores_char_bitmap_line ; .X=0..7, $fd length 1..10, charrom_buffer bitmaps
+draw_lores_char_bitmap_line ; .X=0..6, $fd length 1..10, charrom_buffer bitmaps
         lda $fd
         bne +
         jmp +++
 +       sta draw_line_counter
+        lda #0
+        sta color_column
 ---     lda #4
         sta draw_char_column
         lda #$c0 ; bitmask
@@ -285,6 +305,11 @@ draw_lores_char_bitmap_line ; .X=0..7, $fd length 1..10, charrom_buffer bitmaps
 +       asl
         asl
         ora $ff
+        pha
+        ldy color_column
+        lda color_buffer, y
+        sta 646
+        pla
         tay
         lda lores_codes, y
         bpl +
@@ -304,13 +329,15 @@ draw_lores_char_bitmap_line ; .X=0..7, $fd length 1..10, charrom_buffer bitmaps
         lsr $fe
         lsr $fe
         bne -
+        inc color_column
         txa
         clc
         adc #8
         tax
         dec draw_line_counter
-        bne ---
-        lda $fd
+        beq +
+        jmp ---
++       lda $fd
         asl
         asl
         sta draw_line_counter
@@ -534,6 +561,8 @@ savex !byte 0
 distance !byte 0
 charrvs !byte 0
 lowercase !byte 0
+curcolor !byte 0
+color_column !byte 0
 
 buffer_char_bitmaps_counter !byte 0
 draw_line_counter !byte 0
@@ -546,6 +575,15 @@ lores_codes
         !byte  96, 126, 124, 226, 123,  97, 255, 236
         !byte 108, 127, 225, 251,  98, 252, 254, 224
         !byte 0
+
+color_codes
+        !byte 144, 5, 28, 159, 156, 30, 31, 158
+        !byte 129, 149, 150, 151, 152, 153, 154, 155
+
+color_buffer ; 30 bytes to match charrom_buffer
+        !byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        !byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+        !byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
 
 charrom_buffer ; 8 bytes x 30 characters (note larger than will fit on normal C64 screen)
         !byte 0, 0, 0, 0, 0, 0, 0, 0
