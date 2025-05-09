@@ -250,7 +250,9 @@ draw_lores_char_bitmaps ; input $fd length 1..10, charrom_buffer filled 8..80 bi
 
 draw_lores_char_bitmap_line ; .X=0..7, $fd length 1..10, charrom_buffer bitmaps
         lda $fd
-        sta draw_line_counter
+        bne +
+        jmp +++
++       sta draw_line_counter
 ---     lda #4
         sta draw_char_column
         lda #$c0 ; bitmask
@@ -320,7 +322,7 @@ draw_lores_char_bitmap_line ; .X=0..7, $fd length 1..10, charrom_buffer bitmaps
         bne -
         lda #17 ; down
         jsr $ffd2
-        rts
++++     rts
 
 lores_plot ; input .X (0..79), .Y (0..49)
         ; algorithm:
