@@ -62,6 +62,8 @@ LORES DEMO program
 
 ![Big Editor](https://github.com/davervw/slides-c64/raw/master/big-editor-blink.gif)
 
+BIG EDITOR program
+
     F1 Help               F2 Black on White
     F3 Background Color+  F4 Background Color-
     F5 Border Color+      F6 Border Color-
