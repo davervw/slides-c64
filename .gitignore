@@ -1,5 +1,6 @@
 .DS_Store
 build/labels
+build/lores.lst
 bin/win/acme.exe
 bin/win/exobasic.exe
 bin/win/exomizer.exe

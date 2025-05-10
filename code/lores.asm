@@ -22,6 +22,107 @@ getbytc=$b79b ; parse byte expression from BASIC input
         jmp sys_locate_print
         jmp sys_lores_to
         jmp sys_set_plot
+        jmp sys_swap_store
+        jmp sys_swap_screen
+
+sys_swap_store
+        lda $d020
+        sta $c7fd
+        lda $d021
+        sta $c7fe
+        lda 646
+        sta $c7ff
+        ldy #0
+-       lda $0400, y
+        sta $c800, y
+        lda $0500, y
+        sta $c900, y
+        lda $0600, y
+        sta $ca00, y
+        lda $0700, y
+        sta $cb00, y
+        lda $d800, y
+        sta $cc00, y
+        lda $d900, y
+        sta $cd00, y
+        lda $da00, y
+        sta $ce00, y
+        lda $db00, y
+        sta $cf00, y
+        iny
+        bne -
+        rts
+
+sys_swap_screen
+        lda $d020
+        ldx $c7fd
+        sta $c7fd
+        stx $d020
+        
+        lda $d021
+        ldx $c7fe
+        sta $c7fe
+        stx $d021
+        
+        lda 646
+        ldx $c7ff
+        sta $c7ff
+        stx 646
+
+        ldy #0
+-
+        lda $0400, y
+        ldx $c800, y
+        sta $c800, y
+        txa
+        sta $0400, y
+
+        lda $0500, y
+        ldx $c900, y
+        sta $c900, y
+        txa
+        sta $0500, y
+ 
+        lda $0600, y
+        ldx $ca00, y
+        sta $ca00, y
+        txa
+        sta $0600, y
+
+        lda $0700, y
+        ldx $cb00, y
+        sta $cb00, y
+        txa
+        sta $0700, y
+
+        lda $d800, y
+        ldx $cc00, y
+        sta $cc00, y        
+        txa
+        sta $d800, y
+
+        lda $d900, y
+        ldx $cd00, y
+        sta $cd00, y
+        txa
+        sta $d900, y
+
+        lda $da00, y
+        ldx $ce00, y
+        sta $ce00, y
+        txa
+        sta $da00, y
+
+        lda $db00, y
+        ldx $cf00, y
+        sta $cf00, y
+        txa
+        sta $db00, y
+
+        iny
+        beq +
+        jmp -
++       rts
 
 sys_lores_plot
         jsr getbytc
