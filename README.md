@@ -60,7 +60,7 @@ Note that the big text entry supports control characters (18/146, 14/142) for re
 ![Lores demo](https://github.com/davervw/slides-c64/raw/master/slides2.png)
 LORES DEMO program
 
-![Big Editor](https://github.com/davervw/slides-c64/raw/master/big-editor-blink.png)
+![Big Editor](https://github.com/davervw/slides-c64/raw/master/big-editor-blink.gif)
 
     F1 Help               F2 Black on White
     F3 Background Color+  F4 Background Color-
