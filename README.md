@@ -60,6 +60,18 @@ Note that the big text entry supports control characters (18/146, 14/142) for re
 ![Lores demo](https://github.com/davervw/slides-c64/raw/master/slides2.png)
 LORES DEMO program
 
+![Big Editor](https://github.com/davervw/slides-c64/raw/master/big-editor-blink.png)
+
+    F1 Help               F2 Black on White
+    F3 Background Color+  F4 Background Color-
+    F5 Border Color+      F6 Border Color-
+    F7 White on Black     F8 Save to BASIC
+
+    Cursor keys, Del, Return, Clear, Home
+    RVS On/Off
+    Ctrl+N toggle lowercase/graphics
+    Ctrl+1-8 CBM+1-8 colors
+
 Building requires bin/win/[acme.exe](https://sourceforge.net/projects/acme-crossass/) and bin/win/c1541.exe from [Vice](http://vice-emu.sourceforge.net/index.html#download)
 and revise build.sh to use more Vice executables. 
 
