@@ -1,6 +1,8 @@
 *=$801
 
+chrout = $FFD2 ; character out to device (normally screen)
 getin = $FFE4 ; read character from keyboard, 0=no key
+
 src_p=$FB
 src_h=$FC
 dst_p=$FD
@@ -50,7 +52,9 @@ screen_loop:
 -   jsr getin
     cmp #$00
     beq -
-    bne screen_loop
+    lda #$93
+    jsr chrout
+    jmp screen_loop
 
 decode_color:
     clc
