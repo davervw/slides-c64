@@ -22,7 +22,7 @@
     20  080d 00                 !byte 0
     21                          
     22                          screen_player:
-    23  080e a949                   lda #<start_data
+    23  080e a94e                   lda #<start_data
     24  0810 a209                   ldx #>start_data
     25  0812 85fb                   sta src_p
     26  0814 86fc                   stx src_h
@@ -45,164 +45,167 @@
     43  0831 a2d8                   ldx #$d8
     44  0833 85fd                   sta dst_p
     45  0835 86fe                   stx dst_h
-    46  0837 205408                 jsr decode_color
+    46  0837 205908                 jsr decode_color
     47  083a a900                   lda #$00
     48  083c a204                   ldx #$04
     49  083e 85fd                   sta dst_p
     50  0840 86fe                   stx dst_h
-    51  0842 20db08                 jsr decode_text:
+    51  0842 20e008                 jsr decode_text:
     52  0845 20e4ff             -   jsr getin
     53  0848 c900                   cmp #$00
     54  084a f0f9                   beq -
-    55  084c a993                   lda #$93
-    56  084e 20d2ff                 jsr chrout
-    57  0851 4c1608                 jmp screen_loop
-    58                          
-    59                          decode_color:
-    60  0854 18                     clc
-    61  0855 a000                   ldy #$00
-    62  0857 b1fb                   lda (src_p),y
-    63  0859 65fb                   adc src_p
-    64  085b 8522                   sta end_src_p
-    65  085d c8                     iny
-    66  085e b1fb                   lda (src_p),y
-    67  0860 65fc                   adc src_h
-    68  0862 8523                   sta end_src_h
-    69  0864 c8                     iny
-    70  0865 b1fb                   lda (src_p),y
-    71  0867 85ff                   sta special
-    72  0869 18                     clc
-    73  086a a5fb                   lda src_p
-    74  086c 6903                   adc #$03
-    75  086e 85fb                   sta src_p
-    76  0870 9002                   bcc +
-    77  0872 e6fc                   inc src_h
-    78                          color_loop: 
-    79  0874 a000               +   ldy #$00
-    80  0876 b1fb                   lda (src_p),y
-    81  0878 c5ff                   cmp special
-    82  087a f01e                   beq ++
-    83  087c c8                     iny
-    84  087d 91fd                   sta (dst_p),y
-    85  087f 88                     dey
-    86  0880 4a                     lsr
-    87  0881 4a                     lsr
-    88  0882 4a                     lsr
-    89  0883 4a                     lsr
-    90  0884 91fd                   sta (dst_p),y
-    91  0886 e6fb                   inc src_p
-    92  0888 d002                   bne +
-    93  088a e6fc                   inc src_h
-    94  088c 18                 +   clc
-    95  088d a5fd                   lda dst_p
-    96  088f 6902                   adc #$02
-    97  0891 85fd                   sta dst_p
-    98  0893 9002                   bcc +
-    99  0895 e6fe                   inc dst_h
-   100  0897 4ccc08             +   jmp color_while
-   101  089a c8                 ++  iny
-   102  089b b1fb                   lda (src_p),y
-   103  089d 8524                   sta value
-   104  089f c8                     iny
+    55  084c c903                   cmp #3
+    56  084e f008                   beq +
+    57  0850 a993                   lda #$93
+    58  0852 20d2ff                 jsr chrout
+    59  0855 4c1608                 jmp screen_loop
+    60  0858 60                 +   rts
+    61                          
+    62                          decode_color:
+    63  0859 18                     clc
+    64  085a a000                   ldy #$00
+    65  085c b1fb                   lda (src_p),y
+    66  085e 65fb                   adc src_p
+    67  0860 8522                   sta end_src_p
+    68  0862 c8                     iny
+    69  0863 b1fb                   lda (src_p),y
+    70  0865 65fc                   adc src_h
+    71  0867 8523                   sta end_src_h
+    72  0869 c8                     iny
+    73  086a b1fb                   lda (src_p),y
+    74  086c 85ff                   sta special
+    75  086e 18                     clc
+    76  086f a5fb                   lda src_p
+    77  0871 6903                   adc #$03
+    78  0873 85fb                   sta src_p
+    79  0875 9002                   bcc +
+    80  0877 e6fc                   inc src_h
+    81                          color_loop: 
+    82  0879 a000               +   ldy #$00
+    83  087b b1fb                   lda (src_p),y
+    84  087d c5ff                   cmp special
+    85  087f f01e                   beq ++
+    86  0881 c8                     iny
+    87  0882 91fd                   sta (dst_p),y
+    88  0884 88                     dey
+    89  0885 4a                     lsr
+    90  0886 4a                     lsr
+    91  0887 4a                     lsr
+    92  0888 4a                     lsr
+    93  0889 91fd                   sta (dst_p),y
+    94  088b e6fb                   inc src_p
+    95  088d d002                   bne +
+    96  088f e6fc                   inc src_h
+    97  0891 18                 +   clc
+    98  0892 a5fd                   lda dst_p
+    99  0894 6902                   adc #$02
+   100  0896 85fd                   sta dst_p
+   101  0898 9002                   bcc +
+   102  089a e6fe                   inc dst_h
+   103  089c 4cd108             +   jmp color_while
+   104  089f c8                 ++  iny
    105  08a0 b1fb                   lda (src_p),y
-   106  08a2 8525                   sta len
-   107  08a4 a903                   lda #$03
-   108  08a6 18                     clc
-   109  08a7 65fb                   adc src_p
-   110  08a9 85fb                   sta src_p
-   111  08ab 9002                   bcc +
-   112  08ad e6fc                   inc src_h
-   113  08af a625               +   ldx len
-   114                          color_rle_loop: 
-   115  08b1 a524                   lda value
-   116  08b3 a001                   ldy #$01
-   117  08b5 91fd                   sta (dst_p),y
-   118  08b7 88                     dey
-   119  08b8 4a                     lsr
-   120  08b9 4a                     lsr
-   121  08ba 4a                     lsr
-   122  08bb 4a                     lsr
-   123  08bc 91fd                   sta (dst_p),y
-   124  08be 18                     clc
-   125  08bf a5fd                   lda dst_p
-   126  08c1 6902                   adc #$02
-   127  08c3 85fd                   sta dst_p
-   128  08c5 9002                   bcc +
-   129  08c7 e6fe                   inc dst_h
-   130  08c9 ca                 +   dex
-   131  08ca d0e5                   bne color_rle_loop
-   132                          color_while:
-   133  08cc a5fb                   lda src_p
-   134  08ce a6fc                   ldx src_h
-   135  08d0 e423                   cpx end_src_h
-   136  08d2 90a0                   bcc color_loop
-   137  08d4 d004                   bne +
-   138  08d6 c522                   cmp end_src_p
-   139  08d8 909a                   bcc color_loop
-   140  08da 60                 +   rts
-   141                          
-   142                          decode_text:
-   143  08db 18                     clc
-   144  08dc a000                   ldy #$00
-   145  08de b1fb                   lda (src_p),y
-   146  08e0 65fb                   adc src_p
-   147  08e2 8522                   sta end_src_p
-   148  08e4 c8                     iny
-   149  08e5 b1fb                   lda (src_p),y
-   150  08e7 65fc                   adc src_h
-   151  08e9 8523                   sta end_src_h
-   152  08eb c8                     iny
-   153  08ec b1fb                   lda (src_p),y
-   154  08ee 85ff                   sta special
-   155  08f0 18                     clc
-   156  08f1 a5fb                   lda src_p
-   157  08f3 6903                   adc #$03
-   158  08f5 85fb                   sta src_p
-   159  08f7 9002                   bcc +
-   160  08f9 e6fc                   inc src_h
-   161                          text_loop:
-   162  08fb a000               +   ldy #$00
-   163  08fd b1fb                   lda (src_p),y
-   164  08ff c5ff                   cmp special
-   165  0901 f011                   beq ++
-   166  0903 91fd                   sta (dst_p),y
-   167  0905 e6fb                   inc src_p
-   168  0907 d002                   bne +
-   169  0909 e6fc                   inc src_h
-   170  090b e6fd               +   inc dst_p
-   171  090d d002                   bne +
-   172  090f e6fe                   inc dst_h
-   173  0911 4c3a09             +   jmp text_while
-   174  0914 c8                 ++  iny
-   175  0915 b1fb                   lda (src_p),y
-   176  0917 8524                   sta value
-   177  0919 c8                     iny
+   106  08a2 8524                   sta value
+   107  08a4 c8                     iny
+   108  08a5 b1fb                   lda (src_p),y
+   109  08a7 8525                   sta len
+   110  08a9 a903                   lda #$03
+   111  08ab 18                     clc
+   112  08ac 65fb                   adc src_p
+   113  08ae 85fb                   sta src_p
+   114  08b0 9002                   bcc +
+   115  08b2 e6fc                   inc src_h
+   116  08b4 a625               +   ldx len
+   117                          color_rle_loop: 
+   118  08b6 a524                   lda value
+   119  08b8 a001                   ldy #$01
+   120  08ba 91fd                   sta (dst_p),y
+   121  08bc 88                     dey
+   122  08bd 4a                     lsr
+   123  08be 4a                     lsr
+   124  08bf 4a                     lsr
+   125  08c0 4a                     lsr
+   126  08c1 91fd                   sta (dst_p),y
+   127  08c3 18                     clc
+   128  08c4 a5fd                   lda dst_p
+   129  08c6 6902                   adc #$02
+   130  08c8 85fd                   sta dst_p
+   131  08ca 9002                   bcc +
+   132  08cc e6fe                   inc dst_h
+   133  08ce ca                 +   dex
+   134  08cf d0e5                   bne color_rle_loop
+   135                          color_while:
+   136  08d1 a5fb                   lda src_p
+   137  08d3 a6fc                   ldx src_h
+   138  08d5 e423                   cpx end_src_h
+   139  08d7 90a0                   bcc color_loop
+   140  08d9 d004                   bne +
+   141  08db c522                   cmp end_src_p
+   142  08dd 909a                   bcc color_loop
+   143  08df 60                 +   rts
+   144                          
+   145                          decode_text:
+   146  08e0 18                     clc
+   147  08e1 a000                   ldy #$00
+   148  08e3 b1fb                   lda (src_p),y
+   149  08e5 65fb                   adc src_p
+   150  08e7 8522                   sta end_src_p
+   151  08e9 c8                     iny
+   152  08ea b1fb                   lda (src_p),y
+   153  08ec 65fc                   adc src_h
+   154  08ee 8523                   sta end_src_h
+   155  08f0 c8                     iny
+   156  08f1 b1fb                   lda (src_p),y
+   157  08f3 85ff                   sta special
+   158  08f5 18                     clc
+   159  08f6 a5fb                   lda src_p
+   160  08f8 6903                   adc #$03
+   161  08fa 85fb                   sta src_p
+   162  08fc 9002                   bcc +
+   163  08fe e6fc                   inc src_h
+   164                          text_loop:
+   165  0900 a000               +   ldy #$00
+   166  0902 b1fb                   lda (src_p),y
+   167  0904 c5ff                   cmp special
+   168  0906 f011                   beq ++
+   169  0908 91fd                   sta (dst_p),y
+   170  090a e6fb                   inc src_p
+   171  090c d002                   bne +
+   172  090e e6fc                   inc src_h
+   173  0910 e6fd               +   inc dst_p
+   174  0912 d002                   bne +
+   175  0914 e6fe                   inc dst_h
+   176  0916 4c3f09             +   jmp text_while
+   177  0919 c8                 ++  iny
    178  091a b1fb                   lda (src_p),y
-   179  091c 8525                   sta len
-   180  091e a903                   lda #$03
-   181  0920 18                     clc
-   182  0921 65fb                   adc src_p
-   183  0923 85fb                   sta src_p
-   184  0925 9002                   bcc +
-   185  0927 e6fc                   inc src_h
-   186  0929 a625               +   ldx len
-   187                          text_rle_loop: 
-   188  092b a524                   lda value
-   189  092d a000                   ldy #$00
-   190  092f 91fd                   sta (dst_p),y
-   191  0931 e6fd                   inc dst_p
-   192  0933 d002                   bne +
-   193  0935 e6fe                   inc dst_h
-   194  0937 ca                 +   dex
-   195  0938 d0f1                   bne text_rle_loop
-   196                          text_while:
-   197  093a a5fb                   lda src_p
-   198  093c a6fc                   ldx src_h
-   199  093e e423                   cpx end_src_h
-   200  0940 90b9                   bcc text_loop
-   201  0942 d004                   bne +
-   202  0944 c522                   cmp end_src_p
-   203  0946 90b3                   bcc text_loop
-   204  0948 60                 +   rts
-   205                          
-   206                          start_data:
+   179  091c 8524                   sta value
+   180  091e c8                     iny
+   181  091f b1fb                   lda (src_p),y
+   182  0921 8525                   sta len
+   183  0923 a903                   lda #$03
+   184  0925 18                     clc
+   185  0926 65fb                   adc src_p
+   186  0928 85fb                   sta src_p
+   187  092a 9002                   bcc +
+   188  092c e6fc                   inc src_h
+   189  092e a625               +   ldx len
+   190                          text_rle_loop: 
+   191  0930 a524                   lda value
+   192  0932 a000                   ldy #$00
+   193  0934 91fd                   sta (dst_p),y
+   194  0936 e6fd                   inc dst_p
+   195  0938 d002                   bne +
+   196  093a e6fe                   inc dst_h
+   197  093c ca                 +   dex
+   198  093d d0f1                   bne text_rle_loop
+   199                          text_while:
+   200  093f a5fb                   lda src_p
+   201  0941 a6fc                   ldx src_h
+   202  0943 e423                   cpx end_src_h
+   203  0945 90b9                   bcc text_loop
+   204  0947 d004                   bne +
+   205  0949 c522                   cmp end_src_p
+   206  094b 90b3                   bcc text_loop
+   207  094d 60                 +   rts
+   208                          
+   209                          start_data:

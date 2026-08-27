@@ -52,9 +52,12 @@ screen_loop:
 -   jsr getin
     cmp #$00
     beq -
+    cmp #3
+    beq +
     lda #$93
     jsr chrout
     jmp screen_loop
++   rts
 
 decode_color:
     clc
