@@ -1,5 +1,3 @@
-*=$801
-
 chrout = $FFD2 ; character out to device (normally screen)
 getin = $FFE4 ; read character from keyboard, 0=no key
 
@@ -7,15 +5,17 @@ src_p=$FB
 src_h=$FC
 dst_p=$FD
 dst_h=$FE
-special=$FF
-end_src_p=$22
-end_src_h=$23
-value=$24
-len=$25
+special=$FA
+end_src_p=$61
+end_src_h=$62
+value=$63
+len=$64
 
-; 10 SYS 2345
+*=$1C01
+
+; 10 SYS 7182
 !byte <end_basic, >end_basic
-!text 10, 0, $9E, " 2062", 0, 0
+!text 10, 0, $9E, " 7182", 0, 0
 end_basic:
 !byte 0
 
@@ -24,9 +24,12 @@ screen_player:
     ldx #$06
     sta $d020
     stx $d021
-    sta 646
+    sta 241
     lda #$93
     jsr chrout
+    sei
+    lda #$06 ; RAM bank 0 0000-CFFF, IO D000-DFFF, KERNAL E000-FFFF
+    sta $FF00
     lda #<start_data
     ldx #>start_data
     sta src_p
@@ -39,7 +42,10 @@ screen_loop:
     lda (src_p),y
     cmp #$c6
     beq ++
-+   rts
++   lda #$00
+    sta $FF00
+    cli
+    rts
 ++  clc
     lda src_p
     adc #$02
@@ -56,6 +62,9 @@ screen_loop:
     sta dst_p
     stx dst_h
     jsr decode_text:
+    lda #$00
+    sta $FF00
+    cli
 -   jsr getin
     cmp #$00
     beq -
@@ -63,6 +72,9 @@ screen_loop:
     beq +
     lda #$93
     jsr chrout
+    sei
+    lda #$06
+    sta $FF00
     jmp screen_loop
 +   rts
 
