@@ -41,4 +41,4 @@ write code/rleplayer128.asm rleplayer128.asm,s
 write code/rleplayerted.asm rleplayerted.asm,s
 write LICENSE license,s
 EOF
-[ $? -eq 0 ] && ${VICE}/xplus4.exe -moncommands build/rleplayerted.labels build/slides.d64
+[ $? -eq 0 ] && ${VICE}/x64sc.exe -moncommands build/rleplayer.labels build/slides.d64
