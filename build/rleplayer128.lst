@@ -12,219 +12,313 @@
     10                          end_src_h=$62
     11                          value=$63
     12                          len=$64
-    13                          
-    14                          *=$1C01
+    13                          pages=$65
+    14                          page=$66
     15                          
-    16                          ; 10 SYS 7182
-    17  1c01 0d1c               !byte <end_basic, >end_basic
-    18  1c03 0a009e2037313832...!text 10, 0, $9E, " 7182", 0, 0
-    19                          end_basic:
-    20  1c0d 00                 !byte 0
-    21                          
-    22                          screen_player:
-    23  1c0e a90e                   lda #$0e
-    24  1c10 a206                   ldx #$06
-    25  1c12 8d20d0                 sta $d020
-    26  1c15 8e21d0                 stx $d021
-    27  1c18 85f1                   sta 241
-    28  1c1a a993                   lda #$93
-    29  1c1c 20d2ff                 jsr chrout
-    30  1c1f 78                     sei
-    31  1c20 a906                   lda #$06 ; RAM bank 0 0000-CFFF, IO D000-DFFF, KERNAL E000-FFFF
-    32  1c22 8d00ff                 sta $FF00
-    33  1c25 a977                   lda #<start_data
-    34  1c27 a21d                   ldx #>start_data
-    35  1c29 85fb                   sta src_p
-    36  1c2b 86fc                   stx src_h
-    37                          screen_loop: 
-    38  1c2d a000                   ldy #$00
-    39  1c2f b1fb                   lda (src_p),y
-    40  1c31 d007                   bne +
-    41  1c33 c8                     iny
-    42  1c34 b1fb                   lda (src_p),y
-    43  1c36 c9c6                   cmp #$c6
-    44  1c38 f007                   beq ++
-    45  1c3a a900               +   lda #$00
-    46  1c3c 8d00ff                 sta $FF00
-    47  1c3f 58                     cli
-    48  1c40 60                     rts
-    49  1c41 18                 ++  clc
-    50  1c42 a5fb                   lda src_p
-    51  1c44 6902                   adc #$02
-    52  1c46 85fb                   sta src_p
-    53  1c48 9002                   bcc +
-    54  1c4a e6fc                   inc src_h
-    55  1c4c a900               +   lda #$00
-    56  1c4e a2d8                   ldx #$d8
-    57  1c50 85fd                   sta dst_p
-    58  1c52 86fe                   stx dst_h
-    59  1c54 20821c                 jsr decode_color
-    60  1c57 a900                   lda #$00
-    61  1c59 a204                   ldx #$04
-    62  1c5b 85fd                   sta dst_p
-    63  1c5d 86fe                   stx dst_h
-    64  1c5f 20091d                 jsr decode_text:
-    65  1c62 a900                   lda #$00
-    66  1c64 8d00ff                 sta $FF00
-    67  1c67 58                     cli
-    68  1c68 20e4ff             -   jsr getin
-    69  1c6b c900                   cmp #$00
-    70  1c6d f0f9                   beq -
-    71  1c6f c903                   cmp #3
-    72  1c71 f00e                   beq +
-    73  1c73 a993                   lda #$93
-    74  1c75 20d2ff                 jsr chrout
-    75  1c78 78                     sei
-    76  1c79 a906                   lda #$06
-    77  1c7b 8d00ff                 sta $FF00
-    78  1c7e 4c2d1c                 jmp screen_loop
-    79  1c81 60                 +   rts
-    80                          
-    81                          decode_color:
-    82  1c82 18                     clc
-    83  1c83 a000                   ldy #$00
-    84  1c85 b1fb                   lda (src_p),y
-    85  1c87 65fb                   adc src_p
-    86  1c89 8561                   sta end_src_p
-    87  1c8b c8                     iny
-    88  1c8c b1fb                   lda (src_p),y
-    89  1c8e 65fc                   adc src_h
-    90  1c90 8562                   sta end_src_h
-    91  1c92 c8                     iny
-    92  1c93 b1fb                   lda (src_p),y
-    93  1c95 85fa                   sta special
-    94  1c97 18                     clc
-    95  1c98 a5fb                   lda src_p
-    96  1c9a 6903                   adc #$03
-    97  1c9c 85fb                   sta src_p
-    98  1c9e 9002                   bcc +
-    99  1ca0 e6fc                   inc src_h
-   100                          color_loop: 
-   101  1ca2 a000               +   ldy #$00
-   102  1ca4 b1fb                   lda (src_p),y
-   103  1ca6 c5fa                   cmp special
-   104  1ca8 f01e                   beq ++
-   105  1caa c8                     iny
-   106  1cab 91fd                   sta (dst_p),y
-   107  1cad 88                     dey
-   108  1cae 4a                     lsr
-   109  1caf 4a                     lsr
-   110  1cb0 4a                     lsr
-   111  1cb1 4a                     lsr
-   112  1cb2 91fd                   sta (dst_p),y
-   113  1cb4 e6fb                   inc src_p
-   114  1cb6 d002                   bne +
-   115  1cb8 e6fc                   inc src_h
-   116  1cba 18                 +   clc
-   117  1cbb a5fd                   lda dst_p
-   118  1cbd 6902                   adc #$02
-   119  1cbf 85fd                   sta dst_p
-   120  1cc1 9002                   bcc +
-   121  1cc3 e6fe                   inc dst_h
-   122  1cc5 4cfa1c             +   jmp color_while
-   123  1cc8 c8                 ++  iny
-   124  1cc9 b1fb                   lda (src_p),y
-   125  1ccb 8563                   sta value
-   126  1ccd c8                     iny
-   127  1cce b1fb                   lda (src_p),y
-   128  1cd0 8564                   sta len
-   129  1cd2 a903                   lda #$03
-   130  1cd4 18                     clc
-   131  1cd5 65fb                   adc src_p
-   132  1cd7 85fb                   sta src_p
-   133  1cd9 9002                   bcc +
-   134  1cdb e6fc                   inc src_h
-   135  1cdd a664               +   ldx len
-   136                          color_rle_loop: 
-   137  1cdf a563                   lda value
-   138  1ce1 a001                   ldy #$01
-   139  1ce3 91fd                   sta (dst_p),y
-   140  1ce5 88                     dey
-   141  1ce6 4a                     lsr
-   142  1ce7 4a                     lsr
-   143  1ce8 4a                     lsr
-   144  1ce9 4a                     lsr
-   145  1cea 91fd                   sta (dst_p),y
-   146  1cec 18                     clc
-   147  1ced a5fd                   lda dst_p
-   148  1cef 6902                   adc #$02
-   149  1cf1 85fd                   sta dst_p
-   150  1cf3 9002                   bcc +
-   151  1cf5 e6fe                   inc dst_h
-   152  1cf7 ca                 +   dex
-   153  1cf8 d0e5                   bne color_rle_loop
-   154                          color_while:
-   155  1cfa a5fb                   lda src_p
-   156  1cfc a6fc                   ldx src_h
-   157  1cfe e462                   cpx end_src_h
-   158  1d00 90a0                   bcc color_loop
-   159  1d02 d004                   bne +
-   160  1d04 c561                   cmp end_src_p
-   161  1d06 909a                   bcc color_loop
-   162  1d08 60                 +   rts
-   163                          
-   164                          decode_text:
-   165  1d09 18                     clc
-   166  1d0a a000                   ldy #$00
-   167  1d0c b1fb                   lda (src_p),y
-   168  1d0e 65fb                   adc src_p
-   169  1d10 8561                   sta end_src_p
-   170  1d12 c8                     iny
-   171  1d13 b1fb                   lda (src_p),y
-   172  1d15 65fc                   adc src_h
-   173  1d17 8562                   sta end_src_h
-   174  1d19 c8                     iny
-   175  1d1a b1fb                   lda (src_p),y
-   176  1d1c 85fa                   sta special
-   177  1d1e 18                     clc
-   178  1d1f a5fb                   lda src_p
-   179  1d21 6903                   adc #$03
-   180  1d23 85fb                   sta src_p
-   181  1d25 9002                   bcc +
-   182  1d27 e6fc                   inc src_h
-   183                          text_loop:
-   184  1d29 a000               +   ldy #$00
-   185  1d2b b1fb                   lda (src_p),y
-   186  1d2d c5fa                   cmp special
-   187  1d2f f011                   beq ++
-   188  1d31 91fd                   sta (dst_p),y
-   189  1d33 e6fb                   inc src_p
-   190  1d35 d002                   bne +
-   191  1d37 e6fc                   inc src_h
-   192  1d39 e6fd               +   inc dst_p
-   193  1d3b d002                   bne +
-   194  1d3d e6fe                   inc dst_h
-   195  1d3f 4c681d             +   jmp text_while
-   196  1d42 c8                 ++  iny
-   197  1d43 b1fb                   lda (src_p),y
-   198  1d45 8563                   sta value
-   199  1d47 c8                     iny
-   200  1d48 b1fb                   lda (src_p),y
-   201  1d4a 8564                   sta len
-   202  1d4c a903                   lda #$03
-   203  1d4e 18                     clc
-   204  1d4f 65fb                   adc src_p
-   205  1d51 85fb                   sta src_p
-   206  1d53 9002                   bcc +
-   207  1d55 e6fc                   inc src_h
-   208  1d57 a664               +   ldx len
-   209                          text_rle_loop: 
-   210  1d59 a563                   lda value
-   211  1d5b a000                   ldy #$00
-   212  1d5d 91fd                   sta (dst_p),y
-   213  1d5f e6fd                   inc dst_p
-   214  1d61 d002                   bne +
-   215  1d63 e6fe                   inc dst_h
-   216  1d65 ca                 +   dex
-   217  1d66 d0f1                   bne text_rle_loop
-   218                          text_while:
-   219  1d68 a5fb                   lda src_p
-   220  1d6a a6fc                   ldx src_h
-   221  1d6c e462                   cpx end_src_h
-   222  1d6e 90b9                   bcc text_loop
-   223  1d70 d004                   bne +
-   224  1d72 c561                   cmp end_src_p
-   225  1d74 90b3                   bcc text_loop
-   226  1d76 60                 +   rts
-   227                          
-   228                          start_data:
+    16                          screen_index=$0B00
+    17                          max_pages=127
+    18                          
+    19                          *=$1C01
+    20                          
+    21                          ; 10 SYS 7182
+    22  1c01 0d1c               !byte <end_basic, >end_basic
+    23  1c03 0a009e2037313832...!text 10, 0, $9E, " 7182", 0, 0
+    24                          end_basic:
+    25  1c0d 00                 !byte 0
+    26                          
+    27                          screen_player:
+    28  1c0e a90e                   lda #$0e
+    29  1c10 a206                   ldx #$06
+    30  1c12 8d20d0                 sta $d020
+    31  1c15 8e21d0                 stx $d021
+    32  1c18 85f1                   sta 241
+    33  1c1a a993                   lda #$93
+    34  1c1c 20d2ff                 jsr chrout
+    35  1c1f 78                     sei
+    36  1c20 a906                   lda #$06 ; RAM bank 0 0000-CFFF, IO D000-DFFF, KERNAL E000-FFFF
+    37  1c22 8d00ff                 sta $FF00
+    38  1c25 a9fe                   lda #<start_data
+    39  1c27 a21d                   ldx #>start_data
+    40  1c29 85fb                   sta src_p
+    41  1c2b 86fc                   stx src_h
+    42  1c2d 20a31d                 jsr index_data
+    43                          screen_loop: 
+    44  1c30 a566                   lda page
+    45  1c32 c565                   cmp pages
+    46  1c34 9007                   bcc +
+    47  1c36 a900                   lda #$00
+    48  1c38 8d00ff                 sta $FF00
+    49  1c3b 58                     cli
+    50  1c3c 60                     rts
+    51  1c3d 0a                 +   asl
+    52  1c3e a8                     tay
+    53  1c3f b9000b                 lda screen_index,y
+    54  1c42 be010b                 ldx screen_index+1,y
+    55  1c45 85fb                   sta src_p
+    56  1c47 86fc                   stx src_h
+    57  1c49 a902               ++  lda #2
+    58  1c4b 20f11d                 jsr addbyteto_src_p
+    59  1c4e a900                   lda #$00
+    60  1c50 a2d8                   ldx #$d8
+    61  1c52 85fd                   sta dst_p
+    62  1c54 86fe                   stx dst_h
+    63  1c56 20ba1c                 jsr decode_color
+    64  1c59 a900                   lda #$00
+    65  1c5b a204                   ldx #$04
+    66  1c5d 85fd                   sta dst_p
+    67  1c5f 86fe                   stx dst_h
+    68  1c61 203b1d                 jsr decode_text:
+    69  1c64 a900                   lda #$00
+    70  1c66 8d00ff                 sta $FF00
+    71  1c69 58                     cli
+    72  1c6a 20e4ff             -   jsr getin
+    73  1c6d c900                   cmp #$00
+    74  1c6f f0f9                   beq -
+    75  1c71 c903                   cmp #3
+    76  1c73 d005                   bne +
+    77  1c75 a993                   lda #$93
+    78  1c77 4cd2ff                 jmp chrout
+    79  1c7a c914               +   cmp #20 ; delete
+    80  1c7c d009                   bne +
+    81  1c7e a566               --  lda page ; check if can backup a page
+    82  1c80 f0e8                   beq -
+    83  1c82 c666                   dec page
+    84  1c84 4cac1c                 jmp ++
+    85  1c87 c99d               +   cmp #157 ; left
+    86  1c89 f0f3                   beq --
+    87  1c8b c991                   cmp #145 ; up
+    88  1c8d f0ef                   beq --
+    89  1c8f c931                   cmp #'1'
+    90  1c91 900f                   bcc +
+    91  1c93 c93a                   cmp #('9'+1)
+    92  1c95 b00b                   bcs +
+    93  1c97 38                     sec        ; 1..9
+    94  1c98 e931                   sbc #'1'   ; because 0 based
+    95  1c9a c565               --  cmp pages
+    96  1c9c b0cc                   bcs -      ; ignore key if out of range
+    97  1c9e 8566                   sta page
+    98  1ca0 900a                   bcc ++
+    99  1ca2 c930               +   cmp #'0'
+   100  1ca4 d004                   bne +
+   101  1ca6 a90a                   lda #10    ; try page 10
+   102  1ca8 d0f0                   bne --   
+   103  1caa e666               +   inc page   ; any other key, advance page
+   104                          ++
+   105  1cac a993                   lda #$93   ; before switching page, clear screen
+   106  1cae 20d2ff                 jsr chrout
+   107  1cb1 78                     sei
+   108  1cb2 a906                   lda #$06
+   109  1cb4 8d00ff                 sta $FF00
+   110  1cb7 4c301c                 jmp screen_loop
+   111                          
+   112                          decode_color:
+   113  1cba 18                     clc
+   114  1cbb a000                   ldy #$00
+   115  1cbd b1fb                   lda (src_p),y
+   116  1cbf 65fb                   adc src_p
+   117  1cc1 8561                   sta end_src_p
+   118  1cc3 c8                     iny
+   119  1cc4 b1fb                   lda (src_p),y
+   120  1cc6 65fc                   adc src_h
+   121  1cc8 8562                   sta end_src_h
+   122  1cca c8                     iny
+   123  1ccb b1fb                   lda (src_p),y
+   124  1ccd 85fa                   sta special
+   125  1ccf a903                   lda #3
+   126  1cd1 20f11d                 jsr addbyteto_src_p
+   127                          color_loop: 
+   128  1cd4 a000                   ldy #$00
+   129  1cd6 b1fb                   lda (src_p),y
+   130  1cd8 c5fa                   cmp special
+   131  1cda f01e                   beq ++
+   132  1cdc c8                     iny
+   133  1cdd 91fd                   sta (dst_p),y
+   134  1cdf 88                     dey
+   135  1ce0 4a                     lsr
+   136  1ce1 4a                     lsr
+   137  1ce2 4a                     lsr
+   138  1ce3 4a                     lsr
+   139  1ce4 91fd                   sta (dst_p),y
+   140  1ce6 e6fb                   inc src_p
+   141  1ce8 d002                   bne +
+   142  1cea e6fc                   inc src_h
+   143  1cec 18                 +   clc
+   144  1ced a5fd                   lda dst_p
+   145  1cef 6902                   adc #$02
+   146  1cf1 85fd                   sta dst_p
+   147  1cf3 9002                   bcc +
+   148  1cf5 e6fe                   inc dst_h
+   149  1cf7 4c2c1d             +   jmp color_while
+   150  1cfa c8                 ++  iny
+   151  1cfb b1fb                   lda (src_p),y
+   152  1cfd 8563                   sta value
+   153  1cff c8                     iny
+   154  1d00 b1fb                   lda (src_p),y
+   155  1d02 8564                   sta len
+   156  1d04 a903                   lda #$03
+   157  1d06 18                     clc
+   158  1d07 65fb                   adc src_p
+   159  1d09 85fb                   sta src_p
+   160  1d0b 9002                   bcc +
+   161  1d0d e6fc                   inc src_h
+   162  1d0f a664               +   ldx len
+   163                          color_rle_loop: 
+   164  1d11 a563                   lda value
+   165  1d13 a001                   ldy #$01
+   166  1d15 91fd                   sta (dst_p),y
+   167  1d17 88                     dey
+   168  1d18 4a                     lsr
+   169  1d19 4a                     lsr
+   170  1d1a 4a                     lsr
+   171  1d1b 4a                     lsr
+   172  1d1c 91fd                   sta (dst_p),y
+   173  1d1e 18                     clc
+   174  1d1f a5fd                   lda dst_p
+   175  1d21 6902                   adc #$02
+   176  1d23 85fd                   sta dst_p
+   177  1d25 9002                   bcc +
+   178  1d27 e6fe                   inc dst_h
+   179  1d29 ca                 +   dex
+   180  1d2a d0e5                   bne color_rle_loop
+   181                          color_while:
+   182  1d2c a5fb                   lda src_p
+   183  1d2e a6fc                   ldx src_h
+   184  1d30 e462                   cpx end_src_h
+   185  1d32 90a0                   bcc color_loop
+   186  1d34 d004                   bne +
+   187  1d36 c561                   cmp end_src_p
+   188  1d38 909a                   bcc color_loop
+   189  1d3a 60                 +   rts
+   190                          
+   191                          decode_text:
+   192  1d3b 18                     clc
+   193  1d3c a000                   ldy #$00
+   194  1d3e b1fb                   lda (src_p),y
+   195  1d40 65fb                   adc src_p
+   196  1d42 8561                   sta end_src_p
+   197  1d44 c8                     iny
+   198  1d45 b1fb                   lda (src_p),y
+   199  1d47 65fc                   adc src_h
+   200  1d49 8562                   sta end_src_h
+   201  1d4b c8                     iny
+   202  1d4c b1fb                   lda (src_p),y
+   203  1d4e 85fa                   sta special
+   204  1d50 a903                   lda #3
+   205  1d52 20f11d                 jsr addbyteto_src_p
+   206                          text_loop:
+   207  1d55 a000                   ldy #$00
+   208  1d57 b1fb                   lda (src_p),y
+   209  1d59 c5fa                   cmp special
+   210  1d5b f011                   beq ++
+   211  1d5d 91fd                   sta (dst_p),y
+   212  1d5f e6fb                   inc src_p
+   213  1d61 d002                   bne +
+   214  1d63 e6fc                   inc src_h
+   215  1d65 e6fd               +   inc dst_p
+   216  1d67 d002                   bne +
+   217  1d69 e6fe                   inc dst_h
+   218  1d6b 4c941d             +   jmp text_while
+   219  1d6e c8                 ++  iny
+   220  1d6f b1fb                   lda (src_p),y
+   221  1d71 8563                   sta value
+   222  1d73 c8                     iny
+   223  1d74 b1fb                   lda (src_p),y
+   224  1d76 8564                   sta len
+   225  1d78 a903                   lda #$03
+   226  1d7a 18                     clc
+   227  1d7b 65fb                   adc src_p
+   228  1d7d 85fb                   sta src_p
+   229  1d7f 9002                   bcc +
+   230  1d81 e6fc                   inc src_h
+   231  1d83 a664               +   ldx len
+   232                          text_rle_loop: 
+   233  1d85 a563                   lda value
+   234  1d87 a000                   ldy #$00
+   235  1d89 91fd                   sta (dst_p),y
+   236  1d8b e6fd                   inc dst_p
+   237  1d8d d002                   bne +
+   238  1d8f e6fe                   inc dst_h
+   239  1d91 ca                 +   dex
+   240  1d92 d0f1                   bne text_rle_loop
+   241                          text_while:
+   242  1d94 a5fb                   lda src_p
+   243  1d96 a6fc                   ldx src_h
+   244  1d98 e462                   cpx end_src_h
+   245  1d9a 90b9                   bcc text_loop
+   246  1d9c d004                   bne +
+   247  1d9e c561                   cmp end_src_p
+   248  1da0 90b3                   bcc text_loop
+   249  1da2 60                 +   rts
+   250                          
+   251                          index_data:
+   252  1da3 a900                   lda #0
+   253  1da5 8565                   sta pages
+   254  1da7 8566                   sta page
+   255                              
+   256                          index_loop:
+   257                              ; setup index storage offset in .X
+   258                              ; .A already has pages
+   259  1da9 0a                     asl
+   260  1daa aa                     tax
+   261                          
+   262                              ; set next index to 0000
+   263  1dab a900                   lda #0
+   264  1dad 9d000b                 sta screen_index, x
+   265  1db0 9d010b                 sta screen_index+1, x
+   266                          
+   267                              ; do check for start of page (C600 address)
+   268  1db3 a000                   ldy #0
+   269  1db5 b1fb                   lda (src_p),y
+   270  1db7 d02f                   bne index_exit
+   271  1db9 c8                     iny
+   272  1dba b1fb                   lda (src_p),y
+   273  1dbc c9c6                   cmp #$c6
+   274  1dbe d028                   bne index_exit
+   275                          
+   276                              ; store indexed page
+   277  1dc0 a5fb                   lda src_p
+   278  1dc2 9d000b                 sta screen_index, x
+   279  1dc5 a5fc                   lda src_h
+   280  1dc7 9d010b                 sta screen_index+1, x
+   281  1dca e665                   inc pages
+   282                          
+   283                              ; skip C600 address
+   284  1dcc a902                   lda #2
+   285  1dce 8564                   sta len ; prep upcoming loop at the same time
+   286  1dd0 20f11d                 jsr addbyteto_src_p
+   287                          
+   288                              ; advance past color and text rle data using their lengths
+   289  1dd3 a001               -   ldy #1
+   290  1dd5 b1fb                   lda (src_p),y
+   291  1dd7 aa                     tax
+   292  1dd8 88                     dey
+   293  1dd9 b1fb                   lda (src_p),y
+   294  1ddb 20f31d                 jsr addto_src_p
+   295  1dde c664                   dec len
+   296  1de0 d0f1                   bne -
+   297                          
+   298                              ; while pages < max_pages
+   299  1de2 a565                   lda pages
+   300  1de4 c97f                   cmp #max_pages
+   301  1de6 90c1                   bcc index_loop
+   302                          
+   303                          index_exit:
+   304                              ; reset start_data
+   305  1de8 a9fe                   lda #<start_data
+   306  1dea a21d                   ldx #>start_data
+   307  1dec 85fb                   sta src_p
+   308  1dee 86fc                   stx src_h
+   309  1df0 60                     rts
+   310                          
+   311                          addbyteto_src_p: ; ; A low, !! Warning: X is set to 0 !! fall through to 16-bit add
+   312  1df1 a200                   ldx #0
+   313                          addto_src_p: ; A low, X high, perform 16-bit addition from/to src_p/src_h
+   314  1df3 18                     clc
+   315  1df4 65fb                   adc src_p
+   316  1df6 85fb                   sta src_p
+   317  1df8 8a                     txa
+   318  1df9 65fc                   adc src_h
+   319  1dfb 85fc                   sta src_h
+   320  1dfd 60                     rts
+   321                          
+   322                          start_data:
