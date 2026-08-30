@@ -12,8 +12,13 @@ end_src_p=$22
 end_src_h=$23
 value=$24
 len=$25
+pages=$26 ; count of pages indexed
+page=$27 ; 0 based
 
-; 10 SYS 2345
+screen_index = $33C
+max_pages = 96
+
+; 10 SYS 2062
 !byte <end_basic, >end_basic
 !text 10, 0, $9E, " 2062", 0, 0
 end_basic:
@@ -31,22 +36,22 @@ screen_player:
     ldx #>start_data
     sta src_p
     stx src_h
+    jsr index_data
 screen_loop: 
-    ldy #$00
-    lda (src_p),y
-    bne +
-    iny
-    lda (src_p),y
-    cmp #$c6
-    beq ++
-+   rts
-++  clc
-    lda src_p
-    adc #$02
-    sta src_p
+    lda page
+    cmp pages
     bcc +
-    inc src_h
-+   lda #$00
+    rts
++   asl
+    tay
+    lda screen_index,y
+    ldx screen_index+1,y
+    sta src_p
+    stx src_h
+    lda #2
+    ldx #0
+    jsr addto_src_p
+    lda #$00
     ldx #$d8
     sta dst_p
     stx dst_h
@@ -60,11 +65,38 @@ screen_loop:
     cmp #$00
     beq -
     cmp #3
-    beq +
+    bne +
     lda #$93
+    jmp chrout
++   cmp #20 ; delete
+    bne +
+--  lda page ; check if can backup a page
+    beq -
+    dec page
+    jmp ++
++   cmp #157 ; left
+    beq --
+    cmp #145 ; up
+    beq --
+    cmp #'1'
+    bcc +
+    cmp #('9'+1)
+    bcs +
+    sec        ; 1..9
+    sbc #'1'   ; because 0 based
+--  cmp pages
+    bcs -      ; ignore key if out of range
+    sta page
+    bcc ++
++   cmp #'0'
+    bne +
+    lda #10    ; try page 10
+    bne --   
++   inc page   ; any other key, advance page
+++
+    lda #$93   ; before switching page, clear screen
     jsr chrout
     jmp screen_loop
-+   rts
 
 decode_color:
     clc
@@ -79,14 +111,11 @@ decode_color:
     iny
     lda (src_p),y
     sta special
-    clc
-    lda src_p
-    adc #$03
-    sta src_p
-    bcc +
-    inc src_h
+    lda #3
+    ldx #0
+    jsr addto_src_p
 color_loop: 
-+   ldy #$00
+    ldy #$00
     lda (src_p),y
     cmp special
     beq ++
@@ -114,13 +143,10 @@ color_loop:
     iny
     lda (src_p),y
     sta len
-    lda #$03
-    clc
-    adc src_p
-    sta src_p
-    bcc +
-    inc src_h
-+   ldx len
+    lda #3
+    ldx #0
+    jsr addto_src_p
+    ldx len
 color_rle_loop: 
     lda value
     ldy #$01
@@ -162,14 +188,11 @@ decode_text:
     iny
     lda (src_p),y
     sta special
-    clc
-    lda src_p
-    adc #$03
-    sta src_p
-    bcc +
-    inc src_h
+    lda #3
+    ldx #0
+    jsr addto_src_p
 text_loop:
-+   ldy #$00
+    ldy #$00
     lda (src_p),y
     cmp special
     beq ++
@@ -212,5 +235,74 @@ text_while:
     cmp end_src_p
     bcc text_loop
 +   rts
+
+index_data:
+    lda #0
+    sta pages
+    sta page
+    
+index_loop:
+    ; setup index storage offset in .X
+    ; .A already has pages
+    asl
+    tax
+
+    ; set next index to 0000
+    lda #0
+    sta screen_index, x
+    sta screen_index+1, x
+
+    ; do check for start of page (C600 address)
+    ldy #0
+    lda (src_p),y
+    bne index_exit
+    iny
+    lda (src_p),y
+    cmp #$c6
+    bne index_exit
+
+    ; store indexed page
+    lda src_p
+    sta screen_index, x
+    lda src_h
+    sta screen_index+1, x
+    inc pages
+
+    ; skip C600 address
+    lda #2
+    sta len ; prep upcoming loop at the same time
+    ldx #0
+    jsr addto_src_p
+
+    ; advance past color and text rle data using their lengths
+-   ldy #1
+    lda (src_p),y
+    tax
+    dey
+    lda (src_p),y
+    jsr addto_src_p
+    dec len
+    bne -
+
+    ; while pages < max_pages
+    lda pages
+    cmp #max_pages
+    bcc index_loop
+
+index_exit:
+    lda #<start_data
+    ldx #>start_data
+    sta src_p
+    stx src_h
+    rts
+
+addto_src_p: ; A low, X high, perform 16-bit addition from/to src_p/src_h
+    clc
+    adc src_p
+    sta src_p
+    txa
+    adc src_h
+    sta src_h
+    rts
 
 start_data:
