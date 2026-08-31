@@ -1,353 +1,739 @@
 
-; ******** Source: code/rleplayerted.asm
-     1                          *=$1001
-     2                          
-     3                          chrout = $FFD2 ; character out to device (normally screen)
-     4                          getin = $FFE4 ; read character from keyboard, 0=no key
-     5                          
-     6                          src_p=$60
-     7                          src_h=$61
-     8                          dst_p=$62
-     9                          dst_h=$63
-    10                          special=$64
-    11                          end_src_p=$65
-    12                          end_src_h=$66
-    13                          value1=$67
-    14                          value2=$68
-    15                          len=$69
-    16                          pages=$6A
-    17                          page=$6B
-    18                          
-    19                          screen_index=$333
-    20                          max_pages=96
-    21                          
-    22                          ; 10 SYS 4110
-    23  1001 0d10               !byte <end_basic, >end_basic
-    24  1003 0a009e2034313130...!text 10, 0, $9E, " 4110", 0, 0
-    25                          end_basic:
-    26  100d 00                 !byte 0
-    27                          
-    28                          screen_player:
-    29  100e a20e                   ldx #$0e
-    30  1010 a006                   ldy #$06
-    31  1012 bd2f12                 lda color_table,x
-    32  1015 8d19ff                 sta $ff19 ; border (TED)
-    33  1018 8d3b05                 sta $053B ; foreground (KERNAL)
-    34  101b b92f12                 lda color_table,y
-    35  101e 8d15ff                 sta $ff15 ; background (TED)
-    36  1021 a993                   lda #$93
-    37  1023 20d2ff                 jsr chrout
-    38  1026 a93f                   lda #<start_data
-    39  1028 a212                   ldx #>start_data
-    40  102a 8560                   sta src_p
-    41  102c 8661                   stx src_h
-    42  102e 78                     sei
-    43  102f 8d3fff                 sta $ff3f ; bank in RAM
-    44  1032 20c511                 jsr index_data
-    45                          screen_loop: 
-    46  1035 a56b                   lda page
-    47  1037 c56a                   cmp pages
-    48  1039 9003                   bcc +
-    49  103b 4c2012                 jmp exitbasic
-    50  103e 0a                 +   asl
-    51  103f a8                     tay
-    52  1040 b93303                 lda screen_index,y
-    53  1043 be3403                 ldx screen_index+1,y
-    54  1046 8560                   sta src_p
-    55  1048 8661                   stx src_h
-    56  104a a902                   lda #2
-    57  104c 201312                 jsr addbyteto_src_p
-    58  104f a900                   lda #$00
-    59  1051 a208                   ldx #$08 ; color attributes memory
-    60  1053 8562                   sta dst_p
-    61  1055 8663                   stx dst_h
-    62  1057 20be10                 jsr decode_color
-    63  105a a900                   lda #$00
-    64  105c a20c                   ldx #$0C ; text screen memory
-    65  105e 8562                   sta dst_p
-    66  1060 8663                   stx dst_h
-    67  1062 205d11                 jsr decode_text
-    68  1065 8d3eff                 sta $ff3e ; bank in ROM
-    69  1068 58                     cli
-    70  1069 20e4ff             -   jsr getin
-    71  106c c900                   cmp #$00
-    72  106e f0f9                   beq -
-    73  1070 c91b                   cmp #27 ; ESC
-    74  1072 f004                   beq do_exit
-    75  1074 c903                   cmp #3 ; STOP
-    76  1076 d008                   bne +
-    77                          do_exit:    
-    78  1078 a993                   lda #$93 ; clear screen
-    79  107a 20d2ff                 jsr chrout
-    80  107d 4c2012                 jmp exitbasic
-    81  1080 c914               +   cmp #20 ; delete
-    82  1082 d009                   bne +
-    83  1084 a56b               --  lda page ; check if can backup a page
-    84  1086 f0e1                   beq -
-    85  1088 c66b                   dec page
-    86  108a 4cb210                 jmp ++
-    87  108d c99d               +   cmp #157 ; left
-    88  108f f0f3                   beq --
-    89  1091 c991                   cmp #145 ; up
-    90  1093 f0ef                   beq --
-    91  1095 c931                   cmp #'1'
-    92  1097 900f                   bcc +
-    93  1099 c93a                   cmp #('9'+1)
-    94  109b b00b                   bcs +
-    95  109d 38                     sec        ; 1..9
-    96  109e e931                   sbc #'1'   ; because 0 based
-    97  10a0 c56a               --  cmp pages
-    98  10a2 b0c5                   bcs -      ; ignore key if out of range
-    99  10a4 856b                   sta page
-   100  10a6 900a                   bcc ++
-   101  10a8 c930               +   cmp #'0'
-   102  10aa d004                   bne +
-   103  10ac a90a                   lda #10    ; try page 10
-   104  10ae d0f0                   bne --   
-   105  10b0 e66b               +   inc page   ; any other key, advance page
-   106                          ++
-   107  10b2 a993                   lda #$93   ; before switching page, clear screen
-   108  10b4 20d2ff                 jsr chrout
-   109  10b7 78                     sei
-   110  10b8 8d3fff                 sta $ff3f ; bank in RAM
-   111  10bb 4c3510                 jmp screen_loop
-   112                          
-   113                          decode_color:
-   114  10be 18                     clc
-   115  10bf a000                   ldy #$00
-   116  10c1 b160                   lda (src_p),y
-   117  10c3 6560                   adc src_p
-   118  10c5 8565                   sta end_src_p
-   119  10c7 c8                     iny
-   120  10c8 b160                   lda (src_p),y
-   121  10ca 6561                   adc src_h
-   122  10cc 8566                   sta end_src_h
-   123  10ce c8                     iny
-   124  10cf b160                   lda (src_p),y
-   125  10d1 8564                   sta special
-   126  10d3 a903                   lda #3
-   127  10d5 201312                 jsr addbyteto_src_p
-   128                          color_loop: 
-   129  10d8 a000                   ldy #$00
-   130  10da b160                   lda (src_p),y
-   131  10dc c564                   cmp special
-   132  10de f029                   beq ++
-   133  10e0 48                     pha
-   134  10e1 4a                     lsr
-   135  10e2 4a                     lsr
-   136  10e3 4a                     lsr
-   137  10e4 4a                     lsr
-   138  10e5 aa                     tax
-   139  10e6 bd2f12                 lda color_table, x
-   140  10e9 9162                   sta (dst_p),y
-   141  10eb 68                     pla
-   142  10ec 290f                   and #$0f
-   143  10ee aa                     tax
-   144  10ef bd2f12                 lda color_table, x
-   145  10f2 c8                     iny
-   146  10f3 9162                   sta (dst_p),y
-   147  10f5 e660                   inc src_p
-   148  10f7 d002                   bne +
-   149  10f9 e661                   inc src_h
-   150  10fb 18                 +   clc
-   151  10fc a562                   lda dst_p
-   152  10fe 6902                   adc #$02
-   153  1100 8562                   sta dst_p
-   154  1102 9002                   bcc +
-   155  1104 e663                   inc dst_h
-   156  1106 4c4b11             +   jmp color_while
-   157  1109 c8                 ++  iny
-   158  110a b160                   lda (src_p),y
-   159  110c 4a                     lsr
-   160  110d 4a                     lsr
-   161  110e 4a                     lsr
-   162  110f 4a                     lsr
-   163  1110 aa                     tax
-   164  1111 bd2f12                 lda color_table, x
-   165  1114 8567                   sta value1
-   166  1116 b160                   lda (src_p),y
-   167  1118 290f                   and #$0F
-   168  111a aa                     tax
-   169  111b bd2f12                 lda color_table, x
-   170  111e 8568                   sta value2
-   171  1120 c8                     iny
-   172  1121 b160                   lda (src_p),y
-   173  1123 8569                   sta len
-   174  1125 a903                   lda #$03
-   175  1127 18                     clc
-   176  1128 6560                   adc src_p
-   177  112a 8560                   sta src_p
-   178  112c 9002                   bcc +
-   179  112e e661                   inc src_h
-   180  1130 a669               +   ldx len
-   181                          color_rle_loop:
-   182  1132 a000                   ldy #0
-   183  1134 a567                   lda value1
-   184  1136 9162                   sta (dst_p),y
-   185  1138 a568                   lda value2
-   186  113a c8                     iny
-   187  113b 9162                   sta (dst_p),y
-   188  113d 18                     clc
-   189  113e a562                   lda dst_p
-   190  1140 6902                   adc #$02
-   191  1142 8562                   sta dst_p
-   192  1144 9002                   bcc +
-   193  1146 e663                   inc dst_h
-   194  1148 ca                 +   dex
-   195  1149 d0e7                   bne color_rle_loop
-   196                          color_while:
-   197  114b a560                   lda src_p
-   198  114d a661                   ldx src_h
-   199  114f e466                   cpx end_src_h
-   200  1151 9085                   bcc color_loop
-   201  1153 d007                   bne +
-   202  1155 c565                   cmp end_src_p
-   203  1157 b003                   bcs +
-   204  1159 4cd810                 jmp color_loop
-   205  115c 60                 +   rts
-   206                          
-   207                          decode_text:
-   208  115d 18                     clc
-   209  115e a000                   ldy #$00
-   210  1160 b160                   lda (src_p),y
-   211  1162 6560                   adc src_p
-   212  1164 8565                   sta end_src_p
-   213  1166 c8                     iny
-   214  1167 b160                   lda (src_p),y
-   215  1169 6561                   adc src_h
-   216  116b 8566                   sta end_src_h
-   217  116d c8                     iny
-   218  116e b160                   lda (src_p),y
-   219  1170 8564                   sta special
-   220  1172 a903                   lda #3
-   221  1174 201312                 jsr addbyteto_src_p   
-   222                          text_loop:
-   223  1177 a000                   ldy #$00
-   224  1179 b160                   lda (src_p),y
-   225  117b c564                   cmp special
-   226  117d f011                   beq ++
-   227  117f 9162                   sta (dst_p),y
-   228  1181 e660                   inc src_p
-   229  1183 d002                   bne +
-   230  1185 e661                   inc src_h
-   231  1187 e662               +   inc dst_p
-   232  1189 d002                   bne +
-   233  118b e663                   inc dst_h
-   234  118d 4cb611             +   jmp text_while
-   235  1190 c8                 ++  iny
-   236  1191 b160                   lda (src_p),y
-   237  1193 8567                   sta value1
-   238  1195 c8                     iny
-   239  1196 b160                   lda (src_p),y
-   240  1198 8569                   sta len
-   241  119a a903                   lda #$03
-   242  119c 18                     clc
-   243  119d 6560                   adc src_p
-   244  119f 8560                   sta src_p
-   245  11a1 9002                   bcc +
-   246  11a3 e661                   inc src_h
-   247  11a5 a669               +   ldx len
-   248                          text_rle_loop: 
-   249  11a7 a567                   lda value1
-   250  11a9 a000                   ldy #$00
-   251  11ab 9162                   sta (dst_p),y
-   252  11ad e662                   inc dst_p
-   253  11af d002                   bne +
-   254  11b1 e663                   inc dst_h
-   255  11b3 ca                 +   dex
-   256  11b4 d0f1                   bne text_rle_loop
-   257                          text_while:
-   258  11b6 a560                   lda src_p
-   259  11b8 a661                   ldx src_h
-   260  11ba e466                   cpx end_src_h
-   261  11bc 90b9                   bcc text_loop
-   262  11be d004                   bne +
-   263  11c0 c565                   cmp end_src_p
-   264  11c2 90b3                   bcc text_loop
-   265  11c4 60                 +   rts
-   266                          
-   267                          index_data:
-   268  11c5 a900                   lda #0
-   269  11c7 856a                   sta pages
-   270  11c9 856b                   sta page
-   271                              
-   272                          index_loop:
-   273                              ; setup index storage offset in .X
-   274                              ; .A already has pages
-   275  11cb 0a                     asl
-   276  11cc aa                     tax
-   277                          
-   278                              ; set next index to 0000
-   279  11cd a900                   lda #0
-   280  11cf 9d3303                 sta screen_index, x
-   281  11d2 9d3403                 sta screen_index+1, x
-   282                          
-   283                              ; do check for start of page (C600 address)
-   284  11d5 a000                   ldy #0
-   285  11d7 b160                   lda (src_p),y
-   286  11d9 d02f                   bne index_exit
-   287  11db c8                     iny
-   288  11dc b160                   lda (src_p),y
-   289  11de c9c6                   cmp #$c6
-   290  11e0 d028                   bne index_exit
-   291                          
-   292                              ; store indexed page
-   293  11e2 a560                   lda src_p
-   294  11e4 9d3303                 sta screen_index, x
-   295  11e7 a561                   lda src_h
-   296  11e9 9d3403                 sta screen_index+1, x
-   297  11ec e66a                   inc pages
-   298                          
-   299                              ; skip C600 address
-   300  11ee a902                   lda #2
-   301  11f0 8569                   sta len ; prep upcoming loop at the same time
-   302  11f2 201312                 jsr addbyteto_src_p
-   303                          
-   304                              ; advance past color and text rle data using their lengths
-   305  11f5 a001               -   ldy #1
-   306  11f7 b160                   lda (src_p),y
-   307  11f9 aa                     tax
-   308  11fa 88                     dey
-   309  11fb b160                   lda (src_p),y
-   310  11fd 201512                 jsr addto_src_p
-   311  1200 c669                   dec len
-   312  1202 d0f1                   bne -
-   313                          
-   314                              ; while pages < max_pages
-   315  1204 a56a                   lda pages
-   316  1206 c960                   cmp #max_pages
-   317  1208 90c1                   bcc index_loop
-   318                          
-   319                          index_exit:
-   320                              ; reset start_data
-   321  120a a93f                   lda #<start_data
-   322  120c a212                   ldx #>start_data
-   323  120e 8560                   sta src_p
-   324  1210 8661                   stx src_h
-   325  1212 60                     rts
-   326                          
-   327                          addbyteto_src_p: ; ; A low, !! Warning: X is set to 0 !! fall through to 16-bit add
-   328  1213 a200                   ldx #0
-   329                          addto_src_p: ; A low, X high, perform 16-bit addition from/to src_p/src_h
-   330  1215 18                     clc
-   331  1216 6560                   adc src_p
-   332  1218 8560                   sta src_p
-   333  121a 8a                     txa
-   334  121b 6561                   adc src_h
-   335  121d 8561                   sta src_h
-   336  121f 60                     rts
-   337                          
-   338                          exitbasic:
-   339  1220 a00b                   ldy #11
-   340  1222 a900               -   lda #0
-   341  1224 996000                 sta src_p,y
-   342  1227 88                     dey
-   343  1228 10f8                   bpl -
-   344  122a 8d3eff                 sta $ff3e ; bank in ROM
-   345  122d 58                     cli
-   346  122e 60                     rts ; exit to BASIC
-   347                          
-   348                          ; C64 color to TED color mappings
-   349  122f 0071426354552677...color_table:  !byte $00,$71,$42,$63,$54,$55,$26,$77,$58,$38,$6B,$31,$41,$7F,$56,$61
-   350                          
-   351                          start_data:
+; ******** Source: code/rleplayer.asm
+     1                          ;; rleplayer.asm - interactive player of multiple run length encoded color/text screens (aka slides)
+     2                          ;; by David R. Van Wagner
+     3                          ;;
+     4                          ;; MIT LICENSE
+     5                          ;;
+     6                          ;; github.com/davervw/slides-c64
+     7                          ;; davevw.com
+     8                          ;;
+     9                          ;; targets: one of TARGET_C64, TARGET_C128, TARGET_TED
+    10                          ;;   (set in build.sh or equivalent)
+    11                          ;;
+    12                          ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    13                          ;; MIT License
+    14                          ;;
+    15                          ;; Copyright (c) 2026 David R. Van Wagner
+    16                          ;; davevw.com
+    17                          ;;
+    18                          ;; Permission is hereby granted, free of charge, to any person obtaining a copy
+    19                          ;; of this software and associated documentation files (the "Software"), to deal
+    20                          ;; in the Software without restriction, including without limitation the rights
+    21                          ;; to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+    22                          ;; copies of the Software, and to permit persons to whom the Software is
+    23                          ;; furnished to do so, subject to the following conditions:
+    24                          ;;
+    25                          ;; The above copyright notice and this permission notice shall be included in all
+    26                          ;; copies or substantial portions of the Software.
+    27                          ;;
+    28                          ;; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    29                          ;; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    30                          ;; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+    31                          ;; AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+    32                          ;; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+    33                          ;; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+    34                          ;; SOFTWARE.
+    35                          ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    36                          
+    37                          chrout = $FFD2 ; character out to device (normally screen)
+    38                          getin = $FFE4 ; read character from keyboard, 0=no key
+    39                          plot = $FFF0 ; C clear sets cursor position X=row, Y=col, or if C set gets cursor position
+    40                          
+    41                          !ifdef TARGET_C64 {
+    42                          src_p=$FB
+    43                          src_h=$FC
+    44                          dst_p=$FD
+    45                          dst_h=$FE
+    46                          special=$FF
+    47                          end_src_p=$22
+    48                          end_src_h=$23
+    49                          value=$24
+    50                          len=$25
+    51                          pages=$26 ; count of pages indexed
+    52                          page=$27 ; 0 based
+    53                          save_border=$28
+    54                          save_background=$29
+    55                          save_foreground=$2a
+    56                          
+    57                          screen_index = $33C
+    58                          max_pages = 96
+    59                          
+    60                          text_addr=$0400
+    61                          color_addr=$d800
+    62                          
+    63                          border=$d020
+    64                          background=$d021
+    65                          foreground=646
+    66                          
+    67                          *=$801
+    68                          
+    69                          ; 10 SYS 2062
+    70                          !byte <end_basic, >end_basic
+    71                          !text 10, 0, $9E, " 2062", 0
+    72                          end_basic:
+    73                          !byte 0, 0
+    74                          }
+    75                          
+    76                          !ifdef TARGET_C128 {
+    77                          src_p=$FB
+    78                          src_h=$FC
+    79                          dst_p=$FD
+    80                          dst_h=$FE
+    81                          special=$FA
+    82                          end_src_p=$61
+    83                          end_src_h=$62
+    84                          value=$63
+    85                          len=$64
+    86                          pages=$65
+    87                          page=$66
+    88                          save_border=$67
+    89                          save_background=$68
+    90                          save_foreground=$69
+    91                          
+    92                          screen_index=$0B00
+    93                          max_pages=127
+    94                          
+    95                          text_addr=$0400
+    96                          color_addr=$d800
+    97                          
+    98                          border=$d020
+    99                          background=$d021
+   100                          foreground=241
+   101                          
+   102                          *=$1C01
+   103                          
+   104                          ; 10 graphic 5,1:printchr$(15)"graphic 0 !!!":graphic 0
+   105                          !byte $25,$1c,$0a,$00,$de,$20,$35,$2c,$31,$3a,$99,$c7,$28,$31,$35,$29
+   106                          !byte $22,$47,$52,$41,$50,$48,$49,$43,$20,$30,$20,$21,$21,$21,$22,$3a
+   107                          !byte $de,$20,$30,$00
+   108                          
+   109                          ; 20 bank 15:sys 7224
+   110                          !text $36,$1c,$14,$00,$fe,$02,$20,$31,$35,$3a,$9e," 7224",$00
+   111                          
+   112                          end_basic:
+   113                          !byte 0, 0
+   114                          }
+   115                          
+   116                          !ifdef TARGET_TED { ; Commodore 16, 116, Plus/4, etc.
+   117                          src_p=$60
+   118                          src_h=$61
+   119                          dst_p=$62
+   120                          dst_h=$63
+   121                          special=$64
+   122                          end_src_p=$65
+   123                          end_src_h=$66
+   124                          value1=$67
+   125                          value2=$68
+   126                          len=$69
+   127                          pages=$6A
+   128                          page=$6B
+   129                          save_border=$6C
+   130                          save_background=$6D
+   131                          save_foreground=$6E
+   132                          
+   133                          screen_index=$333
+   134                          max_pages=96
+   135                          
+   136                          text_addr=$0c00
+   137                          color_addr=$0800
+   138                          
+   139                          *=$1001
+   140                          
+   141                          ; 10 SYS 4110
+   142  1001 0d10               !byte <end_basic, >end_basic
+   143  1003 0a009e2034313130...!text 10, 0, $9E, " 4110", 0, 0
+   144                          end_basic:
+   145  100d 00                 !byte 0
+   146                          }
+   147                          
+   148                          screen_player:
+   149  100e 4c1a10                 jmp main
+   150                          
+   151                          set_slide_colors:
+   152  1011 a905                   lda #$05 ; 0E=C64 foreground
+   153  1013 a206                   ldx #$06
+   154  1015 a00e                   ldy #$0e
+   155                          !ifdef TARGET_TED {
+   156  1017 4ca912                 jmp xlat_set_colors
+   157                          } else {
+   158                              jmp set_colors
+   159                          }
+   160                          
+   161                          main:
+   162  101a 20c012                 jsr save_colors
+   163  101d 201110                 jsr set_slide_colors
+   164  1020 a90e                   lda #$0E ; 0E=lowercase, otherwise 93=clearscreen
+   165  1022 20d2ff                 jsr chrout
+   166                          !ifdef TARGET_C128 {
+   167                              jsr sei_c128_ram_bank
+   168                          }
+   169                          !ifdef TARGET_TED {
+   170  1025 20f012                 jsr sei_ted_ram_bank
+   171                          }
+   172  1028 a91c                   lda #<start_data
+   173  102a a213                   ldx #>start_data
+   174  102c 8560                   sta src_p
+   175  102e 8661                   stx src_h
+   176  1030 20d311                 jsr index_data
+   177                          screen_loop: 
+   178                          !ifdef TARGET_C128 {
+   179                              jsr sei_c128_ram_bank
+   180                          }
+   181                          !ifdef TARGET_TED {
+   182  1033 20f012                 jsr sei_ted_ram_bank
+   183                          }
+   184  1036 a56b                   lda page
+   185  1038 c56a                   cmp pages
+   186  103a 9003                   bcc +
+   187  103c 4c2e12                 jmp exit_basic
+   188  103f 0a                 +   asl
+   189  1040 a8                     tay
+   190  1041 b93303                 lda screen_index,y
+   191  1044 be3403                 ldx screen_index+1,y
+   192  1047 8560                   sta src_p
+   193  1049 8661                   stx src_h
+   194  104b a902                   lda #2
+   195  104d 202112                 jsr addbyteto_src_p
+   196  1050 a900                   lda #<color_addr
+   197  1052 a208                   ldx #>color_addr
+   198  1054 8562                   sta dst_p
+   199  1056 8663                   stx dst_h
+   200  1058 20cc10                 jsr decode_color
+   201  105b a900                   lda #<text_addr
+   202  105d a20c                   ldx #>text_addr
+   203  105f 8562                   sta dst_p
+   204  1061 8663                   stx dst_h
+   205  1063 206b11                 jsr decode_text
+   206                          !ifdef TARGET_C128 {    
+   207                              jsr c128_rom_bank_cli
+   208                          }
+   209                          !ifdef TARGET_TED {    
+   210  1066 20f512                 jsr ted_rom_bank_cli
+   211                          }
+   212  1069 20e4ff             -   jsr getin
+   213  106c c900                   cmp #$00
+   214  106e f0f9                   beq -
+   215  1070 c958                   cmp #'X'
+   216  1072 d003                   bne +
+   217  1074 4c8e12                 jmp exit_basic_x
+   218  1077 c91b               +   cmp #27 ; ESC
+   219  1079 f004                   beq +
+   220  107b c903                   cmp #3
+   221  107d d008                   bne ++
+   222  107f a993               +   lda #$93
+   223  1081 20d2ff                 jsr chrout
+   224  1084 4c2e12                 jmp exit_basic
+   225  1087 c914               ++  cmp #20 ; delete
+   226  1089 d009                   bne +
+   227  108b a56b               --  lda page ; check if can backup a page
+   228  108d f0da                   beq -
+   229  108f c66b                   dec page
+   230  1091 4cc410                 jmp ++
+   231  1094 c913               +   cmp #19 ; home
+   232  1096 d007                   bne +
+   233  1098 a900                   lda #0
+   234  109a 856b                   sta page
+   235  109c 4cc410                 jmp ++
+   236  109f c99d               +   cmp #157 ; left
+   237  10a1 f0e8                   beq --
+   238  10a3 c991                   cmp #145 ; up
+   239  10a5 f0e4                   beq --
+   240  10a7 c931                   cmp #'1'
+   241  10a9 900f                   bcc +
+   242  10ab c93a                   cmp #('9'+1)
+   243  10ad b00b                   bcs +
+   244  10af 38                     sec        ; 1..9
+   245  10b0 e931                   sbc #'1'   ; because 0 based
+   246  10b2 c56a               --  cmp pages
+   247  10b4 b0b3                   bcs -      ; ignore key if out of range
+   248  10b6 856b                   sta page
+   249  10b8 900a                   bcc ++
+   250  10ba c930               +   cmp #'0'
+   251  10bc d004                   bne +
+   252  10be a90a                   lda #10    ; try page 10
+   253  10c0 d0f0                   bne --   
+   254  10c2 e66b               +   inc page   ; any other key, advance page
+   255                          ++
+   256  10c4 a993                   lda #$93   ; before switching page, clear screen
+   257  10c6 20d2ff                 jsr chrout
+   258  10c9 4c3310                 jmp screen_loop
+   259                          
+   260                          !ifdef TARGET_TED {
+   261                          decode_color:
+   262  10cc 18                     clc
+   263  10cd a000                   ldy #$00
+   264  10cf b160                   lda (src_p),y
+   265  10d1 6560                   adc src_p
+   266  10d3 8565                   sta end_src_p
+   267  10d5 c8                     iny
+   268  10d6 b160                   lda (src_p),y
+   269  10d8 6561                   adc src_h
+   270  10da 8566                   sta end_src_h
+   271  10dc c8                     iny
+   272  10dd b160                   lda (src_p),y
+   273  10df 8564                   sta special
+   274  10e1 a903                   lda #3
+   275  10e3 202112                 jsr addbyteto_src_p
+   276                          color_loop: 
+   277  10e6 a000                   ldy #$00
+   278  10e8 b160                   lda (src_p),y
+   279  10ea c564                   cmp special
+   280  10ec f029                   beq ++
+   281  10ee 48                     pha
+   282  10ef 4a                     lsr
+   283  10f0 4a                     lsr
+   284  10f1 4a                     lsr
+   285  10f2 4a                     lsr
+   286  10f3 aa                     tax
+   287  10f4 bd0c13                 lda color_table, x
+   288  10f7 9162                   sta (dst_p),y
+   289  10f9 68                     pla
+   290  10fa 290f                   and #$0f
+   291  10fc aa                     tax
+   292  10fd bd0c13                 lda color_table, x
+   293  1100 c8                     iny
+   294  1101 9162                   sta (dst_p),y
+   295  1103 e660                   inc src_p
+   296  1105 d002                   bne +
+   297  1107 e661                   inc src_h
+   298  1109 18                 +   clc
+   299  110a a562                   lda dst_p
+   300  110c 6902                   adc #$02
+   301  110e 8562                   sta dst_p
+   302  1110 9002                   bcc +
+   303  1112 e663                   inc dst_h
+   304  1114 4c5911             +   jmp color_while
+   305  1117 c8                 ++  iny
+   306  1118 b160                   lda (src_p),y
+   307  111a 4a                     lsr
+   308  111b 4a                     lsr
+   309  111c 4a                     lsr
+   310  111d 4a                     lsr
+   311  111e aa                     tax
+   312  111f bd0c13                 lda color_table, x
+   313  1122 8567                   sta value1
+   314  1124 b160                   lda (src_p),y
+   315  1126 290f                   and #$0F
+   316  1128 aa                     tax
+   317  1129 bd0c13                 lda color_table, x
+   318  112c 8568                   sta value2
+   319  112e c8                     iny
+   320  112f b160                   lda (src_p),y
+   321  1131 8569                   sta len
+   322  1133 a903                   lda #$03
+   323  1135 18                     clc
+   324  1136 6560                   adc src_p
+   325  1138 8560                   sta src_p
+   326  113a 9002                   bcc +
+   327  113c e661                   inc src_h
+   328  113e a669               +   ldx len
+   329                          color_rle_loop:
+   330  1140 a000                   ldy #0
+   331  1142 a567                   lda value1
+   332  1144 9162                   sta (dst_p),y
+   333  1146 a568                   lda value2
+   334  1148 c8                     iny
+   335  1149 9162                   sta (dst_p),y
+   336  114b 18                     clc
+   337  114c a562                   lda dst_p
+   338  114e 6902                   adc #$02
+   339  1150 8562                   sta dst_p
+   340  1152 9002                   bcc +
+   341  1154 e663                   inc dst_h
+   342  1156 ca                 +   dex
+   343  1157 d0e7                   bne color_rle_loop
+   344                          color_while:
+   345  1159 a560                   lda src_p
+   346  115b a661                   ldx src_h
+   347  115d e466                   cpx end_src_h
+   348  115f 9085                   bcc color_loop
+   349  1161 d007                   bne +
+   350  1163 c565                   cmp end_src_p
+   351  1165 b003                   bcs +
+   352  1167 4ce610                 jmp color_loop
+   353  116a 60                 +   rts
+   354                          } else { ; TARGET_C64 or TARGET_C128
+   355                          decode_color:
+   356                              clc
+   357                              ldy #$00
+   358                              lda (src_p),y
+   359                              adc src_p
+   360                              sta end_src_p
+   361                              iny
+   362                              lda (src_p),y
+   363                              adc src_h
+   364                              sta end_src_h
+   365                              iny
+   366                              lda (src_p),y
+   367                              sta special
+   368                              lda #3
+   369                              jsr addbyteto_src_p
+   370                          color_loop: 
+   371                              ldy #$00
+   372                              lda (src_p),y
+   373                              cmp special
+   374                              beq ++
+   375                              iny
+   376                              sta (dst_p),y
+   377                              dey
+   378                              lsr
+   379                              lsr
+   380                              lsr
+   381                              lsr
+   382                              sta (dst_p),y
+   383                              inc src_p
+   384                              bne +
+   385                              inc src_h
+   386                          +   clc
+   387                              lda dst_p
+   388                              adc #$02
+   389                              sta dst_p
+   390                              bcc +
+   391                              inc dst_h
+   392                          +   jmp color_while
+   393                          ++  iny
+   394                              lda (src_p),y
+   395                              sta value
+   396                              iny
+   397                              lda (src_p),y
+   398                              sta len
+   399                              lda #3
+   400                              jsr addbyteto_src_p
+   401                              ldx len
+   402                          color_rle_loop: 
+   403                              lda value
+   404                              ldy #$01
+   405                              sta (dst_p),y
+   406                              dey
+   407                              lsr
+   408                              lsr
+   409                              lsr
+   410                              lsr
+   411                              sta (dst_p),y
+   412                              clc
+   413                              lda dst_p
+   414                              adc #$02
+   415                              sta dst_p
+   416                              bcc +
+   417                              inc dst_h
+   418                          +   dex
+   419                              bne color_rle_loop
+   420                          color_while:
+   421                              lda src_p
+   422                              ldx src_h
+   423                              cpx end_src_h
+   424                              bcc color_loop
+   425                              bne +
+   426                              cmp end_src_p
+   427                              bcc color_loop
+   428                          +   rts
+   429                          }
+   430                          
+   431                          decode_text:
+   432  116b 18                     clc
+   433  116c a000                   ldy #$00
+   434  116e b160                   lda (src_p),y
+   435  1170 6560                   adc src_p
+   436  1172 8565                   sta end_src_p
+   437  1174 c8                     iny
+   438  1175 b160                   lda (src_p),y
+   439  1177 6561                   adc src_h
+   440  1179 8566                   sta end_src_h
+   441  117b c8                     iny
+   442  117c b160                   lda (src_p),y
+   443  117e 8564                   sta special
+   444  1180 a903                   lda #3
+   445  1182 202112                 jsr addbyteto_src_p
+   446                          text_loop:
+   447  1185 a000                   ldy #$00
+   448  1187 b160                   lda (src_p),y
+   449  1189 c564                   cmp special
+   450  118b f011                   beq ++
+   451  118d 9162                   sta (dst_p),y
+   452  118f e660                   inc src_p
+   453  1191 d002                   bne +
+   454  1193 e661                   inc src_h
+   455  1195 e662               +   inc dst_p
+   456  1197 d002                   bne +
+   457  1199 e663                   inc dst_h
+   458  119b 4cc411             +   jmp text_while
+   459  119e c8                 ++  iny
+   460  119f b160                   lda (src_p),y
+   461                          !ifdef TARGET_TED {
+   462  11a1 8567                   sta value1
+   463                          } else {
+   464                              sta value
+   465                          }
+   466  11a3 c8                     iny
+   467  11a4 b160                   lda (src_p),y
+   468  11a6 8569                   sta len
+   469  11a8 a903                   lda #$03
+   470  11aa 18                     clc
+   471  11ab 6560                   adc src_p
+   472  11ad 8560                   sta src_p
+   473  11af 9002                   bcc +
+   474  11b1 e661                   inc src_h
+   475  11b3 a669               +   ldx len
+   476                          text_rle_loop: 
+   477                          !ifdef TARGET_TED {
+   478  11b5 a567                   lda value1
+   479                          } else {
+   480                              lda value
+   481                          }
+   482  11b7 a000                   ldy #$00
+   483  11b9 9162                   sta (dst_p),y
+   484  11bb e662                   inc dst_p
+   485  11bd d002                   bne +
+   486  11bf e663                   inc dst_h
+   487  11c1 ca                 +   dex
+   488  11c2 d0f1                   bne text_rle_loop
+   489                          text_while:
+   490  11c4 a560                   lda src_p
+   491  11c6 a661                   ldx src_h
+   492  11c8 e466                   cpx end_src_h
+   493  11ca 90b9                   bcc text_loop
+   494  11cc d004                   bne +
+   495  11ce c565                   cmp end_src_p
+   496  11d0 90b3                   bcc text_loop
+   497  11d2 60                 +   rts
+   498                          
+   499                          index_data:
+   500  11d3 a900                   lda #0
+   501  11d5 856a                   sta pages
+   502  11d7 856b                   sta page
+   503                              
+   504                          index_loop:
+   505                              ; setup index storage offset in .X
+   506                              ; .A already has pages
+   507  11d9 0a                     asl
+   508  11da aa                     tax
+   509                          
+   510                              ; set next index to 0000
+   511  11db a900                   lda #0
+   512  11dd 9d3303                 sta screen_index, x
+   513  11e0 9d3403                 sta screen_index+1, x
+   514                          
+   515                              ; do check for start of page (C600 address)
+   516  11e3 a000                   ldy #0
+   517  11e5 b160                   lda (src_p),y
+   518  11e7 d02f                   bne index_exit
+   519  11e9 c8                     iny
+   520  11ea b160                   lda (src_p),y
+   521  11ec c9c6                   cmp #$c6
+   522  11ee d028                   bne index_exit
+   523                          
+   524                              ; store indexed page
+   525  11f0 a560                   lda src_p
+   526  11f2 9d3303                 sta screen_index, x
+   527  11f5 a561                   lda src_h
+   528  11f7 9d3403                 sta screen_index+1, x
+   529  11fa e66a                   inc pages
+   530                          
+   531                              ; skip C600 address
+   532  11fc a902                   lda #2
+   533  11fe 8569                   sta len ; prep upcoming loop at the same time
+   534  1200 202112                 jsr addbyteto_src_p
+   535                          
+   536                              ; advance past color and text rle data using their lengths
+   537  1203 a001               -   ldy #1
+   538  1205 b160                   lda (src_p),y
+   539  1207 aa                     tax
+   540  1208 88                     dey
+   541  1209 b160                   lda (src_p),y
+   542  120b 202312                 jsr addto_src_p
+   543  120e c669                   dec len
+   544  1210 d0f1                   bne -
+   545                          
+   546                              ; while pages < max_pages
+   547  1212 a56a                   lda pages
+   548  1214 c960                   cmp #max_pages
+   549  1216 90c1                   bcc index_loop
+   550                          
+   551                          index_exit:
+   552  1218 a91c                   lda #<start_data
+   553  121a a213                   ldx #>start_data
+   554  121c 8560                   sta src_p
+   555  121e 8661                   stx src_h
+   556  1220 60                     rts
+   557                          
+   558                          addbyteto_src_p: ; ; A low, !! Warning: X is set to 0 !! fall through to 16-bit add
+   559  1221 a200                   ldx #0
+   560                          addto_src_p: ; A low, X high, perform 16-bit addition from/to src_p/src_h
+   561  1223 18                     clc
+   562  1224 6560                   adc src_p
+   563  1226 8560                   sta src_p
+   564  1228 8a                     txa
+   565  1229 6561                   adc src_h
+   566  122b 8561                   sta src_h
+   567  122d 60                     rts
+   568                          
+   569                          exit_basic:
+   570  122e a900                   lda #0
+   571  1230 aa                     tax
+   572  1231 a001                   ldy #1
+   573                          !ifdef TARGET_TED {
+   574  1233 20a912                 jsr xlat_set_colors
+   575                          } else {
+   576                              jsr set_colors
+   577                          }
+   578                          !ifdef TARGET_C128 {    
+   579                              jsr c128_rom_bank_cli
+   580                          }
+   581                          !ifdef TARGET_TED {    
+   582  1236 20f512                 jsr ted_rom_bank_cli
+   583                          }
+   584  1239 a20c                   ldx #12
+   585  123b a00c                   ldy #(20-exit_message_len/2)
+   586  123d 18                     clc
+   587  123e 20f0ff                 jsr plot
+   588  1241 a9fa                   lda #<exit_message
+   589  1243 a212                   ldx #>exit_message
+   590  1245 20da12                 jsr string_out
+   591  1248 20e4ff             --  jsr getin
+   592  124b c900                   cmp #0
+   593  124d f0f9                   beq --
+   594  124f c913                   cmp #19
+   595  1251 d017                   bne ++
+   596  1253 a900                   lda #0
+   597  1255 856b                   sta page
+   598  1257 a993               -   lda #$93
+   599  1259 20d2ff                 jsr chrout
+   600  125c 201110                 jsr set_slide_colors
+   601  125f a56b                   lda page
+   602  1261 c56a                   cmp pages
+   603  1263 9002                   bcc +
+   604  1265 c66b                   dec page
+   605  1267 4c3310             +   jmp screen_loop
+   606  126a c914               ++  cmp #20 ; del (backspace)
+   607  126c f0e9                   beq -
+   608  126e c99d                   cmp #157 ; left
+   609  1270 f0e5                   beq -
+   610  1272 c991                   cmp #145 ; up
+   611  1274 f0e1                   beq -
+   612  1276 c931                   cmp #'1'
+   613  1278 9010                   bcc +
+   614  127a c93a                   cmp #('9'+1)
+   615  127c b00c                   bcs +
+   616  127e 38                     sec
+   617  127f e931                   sbc #'1'
+   618  1281 c56a                   cmp pages
+   619  1283 b0c3                   bcs --
+   620  1285 856b                   sta page
+   621  1287 4c5712                 jmp -
+   622  128a c958               +   cmp #'X'
+   623  128c d0ba                   bne --
+   624                          exit_basic_x:
+   625                          !ifdef TARGET_C128 {
+   626                              jsr c128_rom_bank_cli
+   627                          }
+   628  128e a56c                   lda save_border
+   629  1290 a66d                   ldx save_background
+   630  1292 a46e                   ldy save_foreground
+   631                          !ifdef TARGET_TED {
+   632  1294 20d012                 jsr set_ted_colors ; no translation
+   633  1297 a00e                   ldy #14
+   634  1299 a900               -   lda #0
+   635  129b 996000                 sta src_p,y
+   636  129e 88                     dey
+   637  129f 10f8                   bpl -
+   638  12a1 20f512                 jsr ted_rom_bank_cli
+   639                          } else {
+   640                              jsr set_colors
+   641                          }
+   642  12a4 a993                   lda #$93
+   643  12a6 4cd2ff                 jmp chrout ; and exit to BASIC
+   644                          
+   645                          !ifdef TARGET_TED {
+   646                          xlat_set_colors:
+   647  12a9 8567                   sta value1
+   648  12ab bd0c13                 lda color_table,x
+   649  12ae 8d15ff                 sta $ff15 ; background
+   650  12b1 a667                   ldx value1
+   651  12b3 bd0c13                 lda color_table,x
+   652  12b6 8d19ff                 sta $ff19 ; border
+   653  12b9 b90c13                 lda color_table,y
+   654  12bc 8d3b05                 sta $053B ; foreground (KERNAL)
+   655  12bf 60                     rts
+   656                          
+   657                          save_colors:
+   658  12c0 ad15ff                 lda $ff15
+   659  12c3 ae19ff                 ldx $ff19
+   660  12c6 ac3b05                 ldy $053B
+   661  12c9 856c                   sta save_border
+   662  12cb 866d                   stx save_background
+   663  12cd 846e                   sty save_foreground
+   664  12cf 60                     rts
+   665                          
+   666                          set_ted_colors:
+   667  12d0 8d15ff                 sta $ff15
+   668  12d3 8e19ff                 stx $ff19
+   669  12d6 8c3b05                 sty $053B
+   670  12d9 60                     rts
+   671                          } else { ; TARGET_C64 OR TARGET_C128
+   672                          set_colors:
+   673                              sta border
+   674                              stx background   
+   675                              sty foreground
+   676                              rts
+   677                          
+   678                          save_colors:
+   679                              lda border
+   680                              ldx background
+   681                              ldy foreground
+   682                              sta save_border
+   683                              stx save_background
+   684                              sty save_foreground
+   685                              rts
+   686                          }
+   687                          
+   688                          string_out:
+   689  12da 8560                   sta src_p
+   690  12dc 8661                   stx src_h
+   691  12de a000                   ldy #0
+   692  12e0 b160               -   lda (src_p), y
+   693  12e2 f00b                   beq +
+   694  12e4 20d2ff                 jsr chrout
+   695  12e7 c8                     iny
+   696  12e8 d0f6                   bne -
+   697  12ea e661                   inc src_h
+   698  12ec 4ce012                 jmp -
+   699  12ef 60                 +   rts
+   700                          
+   701                          !ifdef TARGET_C128 {
+   702                          sei_c128_ram_bank:
+   703                              sei
+   704                              lda #$06 ; RAM bank 0 0000-CFFF, IO D000-DFFF, KERNAL E000-FFFF
+   705                              sta $FF00
+   706                              rts
+   707                          
+   708                          c128_rom_bank_cli:
+   709                              lda #$00
+   710                              sta $FF00
+   711                              cli
+   712                              rts
+   713                          }
+   714                          
+   715                          !ifdef TARGET_TED {
+   716                          sei_ted_ram_bank:
+   717  12f0 78                     sei
+   718  12f1 8d3fff                 sta $ff3f ; bank in RAM
+   719  12f4 60                     rts
+   720                          
+   721                          ted_rom_bank_cli:
+   722  12f5 8d3eff                 sta $ff3e ; bank in ROM
+   723  12f8 58                     cli
+   724  12f9 60                     rts
+   725                          }
+   726                          
+   727                          exit_message:
+   728  12fa 2850524553532058...    !text "(PRESS X TO EXIT)"
+   729                          exit_message_len = * - exit_message    
+   730  130b 00                     !byte 0
+   731                          
+   732                          !ifdef TARGET_TED {
+   733                          ; C64 color to TED color mappings
+   734  130c 0071426354552677...color_table:  !byte $00,$71,$42,$63,$54,$55,$26,$77,$58,$38,$6B,$31,$41,$7F,$56,$61
+   735                          }
+   736                          
+   737                          start_data:

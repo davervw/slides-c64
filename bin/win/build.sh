@@ -5,17 +5,17 @@ result=$?
 cat build/build.err
 [ ${result} -eq 0 ] || exit 1
 rm build/build.err
-${ACME}/acme.exe -f cbm -l build/rleplayer.labels -r build/rleplayer.lst -o build/rleplayer.ml.prg code/rleplayer.asm 2> build/build.err
+${ACME}/acme.exe -DTARGET_C64=1 -f cbm -l build/rleplayer.labels -r build/rleplayer.lst -o build/rleplayer.ml.prg code/rleplayer.asm 2> build/build.err
 result=$?
 cat build/build.err
 [ ${result} -eq 0 ] || exit 1
 rm build/build.err
-${ACME}/acme.exe -f cbm -l build/rleplayer128.labels -r build/rleplayer128.lst -o build/rleplayer128.ml.prg code/rleplayer128.asm 2> build/build.err
+${ACME}/acme.exe -DTARGET_C128=1 -f cbm -l build/rleplayer128.labels -r build/rleplayer128.lst -o build/rleplayer128.ml.prg code/rleplayer.asm 2> build/build.err
 result=$?
 cat build/build.err
 [ ${result} -eq 0 ] || exit 1
 rm build/build.err
-${ACME}/acme.exe -f cbm -l build/rleplayerted.labels -r build/rleplayerted.lst -o build/rleplayerted.ml.prg code/rleplayerted.asm 2> build/build.err
+${ACME}/acme.exe -DTARGET_TED=1 -f cbm -l build/rleplayerted.labels -r build/rleplayerted.lst -o build/rleplayerted.ml.prg code/rleplayer.asm 2> build/build.err
 result=$?
 cat build/build.err
 [ ${result} -eq 0 ] || exit 1
@@ -41,4 +41,4 @@ write code/rleplayer128.asm rleplayer128.asm,s
 write code/rleplayerted.asm rleplayerted.asm,s
 write LICENSE license,s
 EOF
-[ $? -eq 0 ] && ${VICE}/x64sc.exe -moncommands build/rleplayer.labels build/slides.d64
+[ $? -eq 0 ] && ${VICE}/x128.exe -moncommands build/rleplayer128.labels build/slides.d64
