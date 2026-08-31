@@ -62,7 +62,7 @@
     60  0852 a204                   ldx #$04
     61  0854 85fd                   sta dst_p
     62  0856 86fe                   stx dst_h
-    63  0858 202409                 jsr decode_text:
+    63  0858 202409                 jsr decode_text
     64  085b 20e4ff             -   jsr getin
     65  085e c900                   cmp #$00
     66  0860 f0f9                   beq -

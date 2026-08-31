@@ -56,7 +56,7 @@
     54  1c42 be010b                 ldx screen_index+1,y
     55  1c45 85fb                   sta src_p
     56  1c47 86fc                   stx src_h
-    57  1c49 a902               ++  lda #2
+    57  1c49 a902                   lda #2
     58  1c4b 20f11d                 jsr addbyteto_src_p
     59  1c4e a900                   lda #$00
     60  1c50 a2d8                   ldx #$d8
@@ -67,7 +67,7 @@
     65  1c5b a204                   ldx #$04
     66  1c5d 85fd                   sta dst_p
     67  1c5f 86fe                   stx dst_h
-    68  1c61 203b1d                 jsr decode_text:
+    68  1c61 203b1d                 jsr decode_text
     69  1c64 a900                   lda #$00
     70  1c66 8d00ff                 sta $FF00
     71  1c69 58                     cli

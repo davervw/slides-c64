@@ -60,7 +60,7 @@ screen_loop:
     ldx #$04
     sta dst_p
     stx dst_h
-    jsr decode_text:
+    jsr decode_text
 -   jsr getin
     cmp #$00
     beq -

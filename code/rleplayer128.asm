@@ -54,7 +54,7 @@ screen_loop:
     ldx screen_index+1,y
     sta src_p
     stx src_h
-++  lda #2
+    lda #2
     jsr addbyteto_src_p
     lda #$00
     ldx #$d8
@@ -65,7 +65,7 @@ screen_loop:
     ldx #$04
     sta dst_p
     stx dst_h
-    jsr decode_text:
+    jsr decode_text
     lda #$00
     sta $FF00
     cli
