@@ -78,3 +78,9 @@ Building requires bin/win/[acme.exe](https://sourceforge.net/projects/acme-cross
 and revise build.sh to use more Vice executables. 
 
 [Slides.D64](https://github.com/davervw/slides-c64/raw/master/build/slides.d64) disk image
+
+RLEPLAYER.ML
+RLEPLAYER128.ML
+RLEPLAYERTED.ML
+
+Work in progress... need to document how to use these, and create a better rle screen creation tool (currently manual within PRESENTATION, press F2 to snapshot one screen... be very very patient waiting for repaint, page number, and hex addresses, save as file (how!?) then append the screen files into one single file, then prepend the player... not easy)
