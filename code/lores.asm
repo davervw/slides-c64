@@ -13,6 +13,7 @@ chkcom=$aefd ; checks for $2c
 frmevl=$ad9e ; evaluate expression
 pulstr=$b6a3 ; pull string from descriptor stack
 getbytc=$b79b ; parse byte expression from BASIC input
+counts=$caf5
 
 * = start
         jmp sys_lores_plot
@@ -539,24 +540,10 @@ bank_norm
         sta $01
         rts
 
-bank_ram
-        lda $01
-        and #$f8
-        sta $01
-        rts
-
 bank_charrom ; note caller responsible for disabling/enabling interrupts or equivalent
         lda $01
         and #$F8
         ora #$03
-        sta $01
-        rts
-
-bank_select
-        sta my_bank
-        lda $01
-        and #$f8
-        ora my_bank
         sta $01
         rts
 
@@ -643,8 +630,6 @@ get_slope
 +       cmp x_diff ; compare absolute values, C=1 if y_diff > x_diff
         rts
 
-my_bank !byte 0
-
 x_coord !byte 0
 y_coord !byte 0
 x2_coord !byte 0
@@ -679,6 +664,7 @@ color_codes
         !byte 144, 5, 28, 159, 156, 30, 31, 158
         !byte 129, 149, 150, 151, 152, 153, 154, 155
 
+; TODO: move buffers to C600, frees up more code space
 color_buffer ; 30 bytes to match charrom_buffer
         !byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
         !byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
@@ -709,3 +695,273 @@ charrom_buffer ; 8 bytes x 30 characters (note larger than will fit on normal C6
         !byte 0, 0, 0, 0, 0, 0, 0, 0
         !byte 0, 0, 0, 0, 0, 0, 0, 0
         !byte 0, 0, 0, 0, 0, 0, 0, 0
+
+; c600-cbe7 max buffer needed (color+text)
+; c900-caf4 overlap color bytes buffer (500 bytes), overlap is okay, not needed before text is encoded (color encoded first)
+; caf5-cbf4 overlap counts (256 bytes), overlap is okay, not needed before text is encoded (color encoded first)
+
+; c7fd-cfff !!! WARNING: used for swap screen buffers, cannot be used simultaneously with RLE code !!!
+; TODO: in future could use RLE encoding and buffer instead to save memory, not overwrite code
+
+* = $cbf5 ; remaining code space to cfff
+; 52213
+
+rle_encode_screen: ; encode color and text to c600..cbe7 (or fewer bytes, see lengths encoded)
+; lengths are encoded as first two bytes, after the first block (color) is the second block (text)
+        jsr count_color_bytes ; also gets color bytes (combined nybbles) to c900..caf3
+        sta $02
+        lda #$00
+        ldx #$c9
+        sta $fb
+        stx $fc
+        lda #$00
+        ldx #$c6
+        sta $22
+        stx $23
+        lda #<500
+        ldx #>500
+        jsr rle_encode
+        jsr count_text_bytes
+        sta $02
+        lda #$00
+        ldx #$04
+        sta $fb
+        stx $fc
+        lda #<1000
+        ldx #>1000
+        ; fall through to rle_encode
+rle_encode: ; expects a/x as count(lo/hi) of bytes to encode, src:$fb/$fc, dest:$22/$23, least:$02
+; stores and updates dest to point to next byte past encoded, (least is used for encoding runs)
+        sta $fd
+        stx $fe
+        lda $22
+        ldx $23
+        sta $26
+        stx $27 ; copies $22/23 to $26/27 for later
+        lda #2
+        jsr add_22_ptr ; skip over length bytes to store later
+        ldy #0
+        lda $02
+        sta ($22),y
+        jsr inc_22_ptr
+        ldy #$ff
+        sty $24 ; set flag that v ($25) not set
+        iny ; zero
+        sty $ff ; n
+-       lda ($fb), y
+        ;test (a<>v and a<>mn)
+        bit $24
+        bmi + ; a<>v because v not set
+        cmp $25 ; a==v?
+        beq +++
++       cmp $02 ; a==mn?
+        beq ++
+        ;satisfies if (a<>v and a<>mn)
+        ;then v=a:n=1:pokem,v:m=m+1:goto ...
+        sta $25
+        sty $24 ; flag that v ($25) is set
+        iny ; 1
+        sty $ff ; n=1
+        dey ; 0
+        sta ($22),y
+        jsr inc_22_ptr ; m=m+1
+        jmp ++++
+++      ;satisfies if (a<>v and a=mn)
+        ;then v=a:n=0:m=m+3
+        sta $25
+        sty $24 ; flag that v ($25) is set
+        sty $ff ; n = 0
+        lda #3
+        jsr add_22_ptr ; m=m+3
+        lda $25 ; restore a
+        ;fall through to next
++++     inc $ff
+        ;test (n<4 and v<>mn)
+        ldx $ff
+        beq + ; n==256 (zero, overflowed)
+        cpx #4
+        bcs +
+        ldx $25
+        cpx $02
+        beq +
+        ;satisifes (n<4 and v<>mn)
+        sta ($22),y ; poke m,v
+        jsr inc_22_ptr ; m=m+1
+        jmp ++++
++       ;test (v=mn or n=4)
+        cmp $02
+        beq +
+        ldx $ff
+        cpx #4
+        bne ++
++       ;satisfies (v=mn or n=4)
+        jsr dec_22_ptr
+        lda $ff
+        sta ($22),y
+        jsr dec_22_ptr
+        lda $25
+        sta ($22),y
+        jsr dec_22_ptr
+        lda $02
+        sta ($22),y
+        lda #3
+        jsr add_22_ptr
+        jmp ++++
+++      ;test (n<256 [not zero]), note n should already be >4 if got here
+        ldx $ff
+        beq +
+        jsr dec_22_ptr
+        lda $ff
+        sta ($22),y
+        jsr inc_22_ptr
+        jmp ++++
++       ;if here, then n=256 [overflow to zero], so store a new byte following
+        inc $ff ; n = 1
+        sta ($22),y
+        jsr inc_22_ptr
+++++    ; src = src + 1
+        inc $fb
+        bne +
+        inc $fc
++       jsr sub1_from_fd
+        beq +
+        jmp -
++       sec
+        lda $22
+        sbc $26
+        tax
+        lda $23
+        sbc $27
+        ; length is now X/A (lo/hi)
+        iny ; y=1
+        sta ($26), y
+        dey ; y=0
+        txa
+        sta ($26), y
+        rts
+
+count_text_bytes:
+        lda #$00
+        ldx #$04
+        sta $fb
+        stx $fc
+        lda #<1000
+        ldx #>1000
+        sta $fd
+        stx $fe
+count_bytes:        
+        ldy #0
+        tya
+-       sta counts,y
+        iny
+        bne - ; loop zeroing out counts
+-       lda ($fb),y
+        tax
+        inc counts,x
+        bne +
+        dec counts,x ; keep at maximum value $ff
++       jsr sub1_from_fd
+        beq + ; done with source bytes to count
+        iny
+        bne - ; loop counting bytes (one page)
+        ldx $fc
+        inx
+        stx $fc
+        bne - ; loop counting bytes (all pages)
++       ldy #0
+        dey ; $ff
+        sty $02 ; least count, start big
+-       lda counts,y
+        cmp $02
+        bcs +
+        sta $02
+        sty $ff
++       dey
+        cpy #$ff
+        bne -
+        lda $ff ; index = byte value with least count
+        ldx $02 ; least count
+        rts
+
+get_color_bytes:
+        lda #$00
+        ldx #$d8
+        sta $fb
+        stx $fc
+        lda #$00
+        ldx #$c9
+        sta $22
+        stx $23
+        lda #<500
+        ldx #>500
+        sta $fd
+        stx $fe
+        ldy #0
+-       lda ($fb),y
+        asl
+        asl
+        asl
+        asl
+        sta $02
+        iny
+        lda ($fb),y
+        and #$0f
+        ora $02
+        dey
+        sta ($22),y
+        inc $fb
+        inc $fb
+        bne +
+        inc $fc
++       inc $22
+        bne +
+        inc $23
++       jsr sub1_from_fd
+        bne -
+        rts
+
+count_color_bytes:
+        jsr get_color_bytes
+        lda #$00
+        ldx #$c9
+        sta $fb
+        stx $fc
+        lda #<500
+        ldx #>500
+        sta $fd
+        stx $fe
+        jmp count_bytes
+
+sub1_from_fd: ; fd/fe has a count value, subtract one, setting Z if zero
+        sec ; set borrow not needed
+        lda $fd
+        sbc #1 ; if borrow, clears carry
+        sta $fd
+        lda $fe
+        sbc #0 ; subtracts 1 when carry is clear (borrow happened before)
+        sta $fe
+        ora $fd ; combine all bits to test for both zero
+        rts
+
+inc_22_ptr:
+        lda #1
+add_22_ptr:
+        clc
+        adc $22
+        sta $22
+        bcc +
+        inc $23
++       rts
+
+dec_22_ptr:
+        sec
+        lda $22
+        sbc #1
+        sta $22
+        lda $23
+        sbc #0
+        sta $23
+        rts
+
+finish:
+        !byte 0
