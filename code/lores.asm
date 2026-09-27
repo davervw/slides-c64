@@ -10,21 +10,70 @@ chrout=$ffd2
 
 syntax_error=$af08
 chkcom=$aefd ; checks for $2c
+frmnum=$ad8a ; evaluate expression, check data type
 frmevl=$ad9e ; evaluate expression
 pulstr=$b6a3 ; pull string from descriptor stack
 getbytc=$b79b ; parse byte expression from BASIC input
+makadr=$b7f7 ; convert fp to 2 byte integer
+setlfs=$ffba
+setnam=$ffbd
+fsave=$ffd8
+
 counts=$caf5
 
 * = start
-        jmp sys_lores_plot
-        jmp sys_lores_down
-        jmp sys_lores_right
-        jmp sys_big_text_print
-        jmp sys_locate_print
-        jmp sys_lores_to
-        jmp sys_set_plot
-        jmp sys_swap_store
-        jmp sys_swap_screen
+        jmp sys_lores_plot     ; 49152
+        jmp sys_lores_down     ; 49155
+        jmp sys_lores_right    ; 49158
+        jmp sys_big_text_print ; 49161
+        jmp sys_locate_print   ; 49164
+        jmp sys_lores_to       ; 49167
+        jmp sys_set_plot       ; 49170
+        jmp sys_swap_store     ; 49173
+        jmp sys_swap_screen    ; 49176
+        jmp sys_bsave          ; 49179
+sys_rle_encode
+        jmp rle_encode_screen  ; 49182 WARNING: only present if sys_swap_* not used
+sys_rle_decode
+        jmp rle_decode_screen  ; 49185 WARNING: only present if sys_swap_* not used
+
+sys_bsave
+        ; SYS sysaddr,"FILENAME",device#,addr1,addr2
+        jsr chkcom
+	jsr frmevl	; evaluate expression
+	bit $d		; string or numeric?
+	bmi +
+        jmp syntax_error
++       jsr pulstr	; pull string from descriptor stack (a=len, x=lo, y=hi addr of string)
+        sta $ff
+        stx $fb
+        sty $fc
+        jsr getbytc
+        stx $02
+        jsr chkcom
+        jsr frmnum  ; evaluate expression and make sure is a number
+        jsr makadr  ; convert to 16-bit unsigned integer in .Y(lo)/.A(hi)
+        sty $fd
+        sta $fe
+        jsr chkcom
+        jsr frmnum  ; evaluate expression and make sure is a number
+        jsr makadr  ; convert to 16-bit unsigned integer in .Y(lo)/.A(hi)
+        sty $22
+        sta $23
+        lda #$c0 ; KERNAL control and error messages
+        sta $9d ; set messages to be displayed
+        lda #1
+        ldx #8
+        ldy #15
+        jsr setlfs
+        lda $ff
+        ldx $fb
+        ldy $fc
+        jsr setnam
+        lda #$fd
+        ldx $22
+        ldy $23
+        jmp fsave
 
 sys_swap_store
         lda $d020
@@ -34,6 +83,8 @@ sys_swap_store
         lda 646
         sta $c7ff
         ldy #0
+        sty sys_rle_encode ; disable because overwriting code
+        sty sys_rle_decode ; disable because overwriting code
 -       lda $0400, y
         sta $c800, y
         lda $0500, y
@@ -71,6 +122,8 @@ sys_swap_screen
         stx 646
 
         ldy #0
+        sty sys_rle_encode ; disable because overwriting code
+        sty sys_rle_decode ; disable because overwriting code
 -
         lda $0400, y
         ldx $c800, y
@@ -664,50 +717,20 @@ color_codes
         !byte 144, 5, 28, 159, 156, 30, 31, 158
         !byte 129, 149, 150, 151, 152, 153, 154, 155
 
-; TODO: move buffers to C600, frees up more code space
-color_buffer ; 30 bytes to match charrom_buffer
-        !byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-        !byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-        !byte 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-
-charrom_buffer ; 8 bytes x 30 characters (note larger than will fit on normal C64 screen)
-        !byte 0, 0, 0, 0, 0, 0, 0, 0
-        !byte 0, 0, 0, 0, 0, 0, 0, 0
-        !byte 0, 0, 0, 0, 0, 0, 0, 0
-        !byte 0, 0, 0, 0, 0, 0, 0, 0
-        !byte 0, 0, 0, 0, 0, 0, 0, 0
-        !byte 0, 0, 0, 0, 0, 0, 0, 0
-        !byte 0, 0, 0, 0, 0, 0, 0, 0
-        !byte 0, 0, 0, 0, 0, 0, 0, 0
-        !byte 0, 0, 0, 0, 0, 0, 0, 0
-        !byte 0, 0, 0, 0, 0, 0, 0, 0
-        !byte 0, 0, 0, 0, 0, 0, 0, 0
-        !byte 0, 0, 0, 0, 0, 0, 0, 0
-        !byte 0, 0, 0, 0, 0, 0, 0, 0
-        !byte 0, 0, 0, 0, 0, 0, 0, 0
-        !byte 0, 0, 0, 0, 0, 0, 0, 0
-        !byte 0, 0, 0, 0, 0, 0, 0, 0
-        !byte 0, 0, 0, 0, 0, 0, 0, 0
-        !byte 0, 0, 0, 0, 0, 0, 0, 0
-        !byte 0, 0, 0, 0, 0, 0, 0, 0
-        !byte 0, 0, 0, 0, 0, 0, 0, 0
-        !byte 0, 0, 0, 0, 0, 0, 0, 0
-        !byte 0, 0, 0, 0, 0, 0, 0, 0
-        !byte 0, 0, 0, 0, 0, 0, 0, 0
-        !byte 0, 0, 0, 0, 0, 0, 0, 0
+color_buffer = $c600 ; 30 bytes to match charrom_buffer
+charrom_buffer = $c61E ; 8 bytes x 30 characters (note larger than will fit on normal C64 screen)
 
 ; c600-cbe7 max buffer needed (color+text)
 ; c900-caf4 overlap color bytes buffer (500 bytes), overlap is okay, not needed before text is encoded (color encoded first)
 ; caf5-cbf4 overlap counts (256 bytes), overlap is okay, not needed before text is encoded (color encoded first)
-
 ; c7fd-cfff !!! WARNING: used for swap screen buffers, cannot be used simultaneously with RLE code !!!
-; TODO: in future could use RLE encoding and buffer instead to save memory, not overwrite code
+; TODO: in future could move to other unused banked RAM (e.g. A800-AFFF etc.)
 
-* = $cbf5 ; remaining code space to cfff
-; 52213
+* = $cbf5 ; 52213 - remaining code space to cfff safely past necessary buffers (see above)
 
 rle_encode_screen: ; encode color and text to c600..cbe7 (or fewer bytes, see lengths encoded)
 ; lengths are encoded as first two bytes, after the first block (color) is the second block (text)
+; returns end address + 1 in x/y (lo/hi)
         jsr count_color_bytes ; also gets color bytes (combined nybbles) to c900..caf3
         sta $02
         lda #$00
@@ -729,7 +752,27 @@ rle_encode_screen: ; encode color and text to c600..cbe7 (or fewer bytes, see le
         stx $fc
         lda #<1000
         ldx #>1000
-        ; fall through to rle_encode
+        jsr rle_encode
+        ldx $22
+        ldy $23
+        rts
+
+rle_decode_screen:
+        ldx #<$c600
+        ldy #>$c600
+        stx $fb
+        sty $fc
+        ldx #<$d800
+        ldy #>$d800
+        stx $fd
+        sty $fe
+        jsr decode_color
+        ldx #<$0400
+        ldy #>$0400
+        stx $fd
+        sty $fe
+        jmp decode_text
+
 rle_encode: ; expects a/x as count(lo/hi) of bytes to encode, src:$fb/$fc, dest:$22/$23, least:$02
 ; stores and updates dest to point to next byte past encoded, (least is used for encoding runs)
         sta $fd
@@ -962,6 +1005,151 @@ dec_22_ptr:
         sbc #0
         sta $23
         rts
+
+; borrowed from rleplayer.asm
+decode_color:
+    CLC
+    LDY #$00
+    LDA ($FB),Y
+    ADC $FB
+    STA $22
+    INY
+    LDA ($FB),Y
+    ADC $FC
+    STA $23
+    INY
+    LDA ($FB),Y
+    STA $FF
+    LDA #$03
+    JSR addbyteto_src_p
+color_loop:
+    LDY #$00
+    LDA ($FB),Y
+    CMP $FF
+    BEQ ++
+    INY
+    STA ($FD),Y
+    DEY
+    LSR
+    LSR
+    LSR
+    LSR
+    STA ($FD),Y
+    INC $FB
+    BNE +
+    INC $FC
++   CLC
+    LDA $FD
+    ADC #$02
+    STA $FD
+    BCC +
+    INC $FE
++   JMP color_while
+++  INY
+    LDA ($FB),Y
+    STA $24
+    INY
+    LDA ($FB),Y
+    STA $25
+    LDA #$03
+    JSR addbyteto_src_p
+    LDX $25
+color_rle_loop:
+    LDA $24
+    LDY #$01
+    STA ($FD),Y
+    DEY
+    LSR
+    LSR
+    LSR
+    LSR
+    STA ($FD),Y
+    CLC
+    LDA $FD
+    ADC #$02
+    STA $FD
+    BCC +
+    INC $FE
++   DEX
+    BNE color_rle_loop
+color_while:
+    LDA $FB
+    LDX $FC
+    CPX $23
+    BCC color_loop
+    BNE +
+    CMP $22
+    BCC color_loop
++   RTS
+decode_text:
+    CLC
+    LDY #$00
+    LDA ($FB),Y
+    ADC $FB
+    STA $22
+    INY
+    LDA ($FB),Y
+    ADC $FC
+    STA $23
+    INY
+    LDA ($FB),Y
+    STA $FF
+    LDA #$03
+    JSR addbyteto_src_p
+text_loop:
+    LDY #$00
+    LDA ($FB),Y
+    CMP $FF
+    BEQ ++
+    STA ($FD),Y
+    INC $FB
+    BNE +
+    INC $FC
++   INC $FD
+    BNE +
+    INC $FE
++   JMP text_while
+++  INY
+    LDA ($FB),Y
+    STA $24
+    INY
+    LDA ($FB),Y
+    STA $25
+    LDA #$03
+    CLC
+    ADC $FB
+    STA $FB
+    BCC +
+    INC $FC
++   LDX $25
+text_rle_loop:
+    LDA $24
+    LDY #$00
+    STA ($FD),Y
+    INC $FD
+    BNE +
+    INC $FE
++   DEX
+    BNE text_rle_loop
+text_while:
+    LDA $FB
+    LDX $FC
+    CPX $23
+    BCC text_loop
+    BNE +
+    CMP $22
+    BCC text_loop
++   RTS
+addbyteto_src_p:
+    LDX #$00
+addto_src_p:
+    CLC
+    ADC $FB
+    STA $FB
+    TXA
+    ADC $FC
+    STA $FC
+    RTS
 
 finish:
         !byte 0

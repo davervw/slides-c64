@@ -249,7 +249,47 @@ screen_loop:
     bcc ++
 +   cmp #'0'
     bne +
-    lda #10    ; try page 10
+    lda #9     ; try page 10 (zero based)
+    bne --   
++   cmp #'!'
+    bne +
+    lda #10     ; try page 11 (zero based)
+    bne --   
++   cmp #'@'
+    bne +
+    lda #11     ; try page 12 (zero based)
+    bne --   
++   cmp #'#'
+    bne +
+    lda #12     ; try page 13 (zero based)
+    bne --   
++   cmp #'$'
+    bne +
+    lda #13     ; try page 14 (zero based)
+    bne --   
++   cmp #'%'
+    bne +
+    lda #14     ; try page 15 (zero based)
+    bne --   
++   cmp #'^'
+    bne +
+    lda #15     ; try page 16 (zero based)
+    bne --   
++   cmp #'&'
+    bne +
+    lda #16     ; try page 17 (zero based)
+    bne --   
++   cmp #'*'
+    bne +
+    lda #17     ; try page 18 (zero based)
+    bne --   
++   cmp #'('
+    bne +
+    lda #18     ; try page 19 (zero based)
+    bne --   
++   cmp #')'
+    bne +
+    lda #19     ; try page 20 (zero based)
     bne --   
 +   inc page   ; any other key, advance page
 ++
