@@ -79,8 +79,21 @@ and revise build.sh to use more Vice executables.
 
 [Slides.D64](https://github.com/davervw/slides-c64/raw/master/build/slides.d64) disk image
 
-RLEPLAYER.ML
+RLEPLAYER64.ML
 RLEPLAYER128.ML
 RLEPLAYERTED.ML
 
-Work in progress... need to document how to use these, and create a better rle screen creation tool (currently manual within PRESENTATION, press F2 to snapshot one screen... be very very patient waiting for repaint, page number, and hex addresses, save as file (how!?) then append the screen files into one single file, then prepend the player... not easy)
+New feature!  The PRESENTATION* slide editor/render programs accept an F2 keystroke to save the current page to disk (run length encoded).  Multiple of these files can be appended to the approprate RLEPLAYER*.ML runtimes, to turn them into a program that displays the slides.  This allows the stack to be developed on C64, and be fast playable on multiple systems (C64, C128, TED) from a simple machine language + data file.
+
+Instructions:
+
+* To prep the slides for RLEPLAYER, run the desired PRESENTATION* stack, go to the first page and press F2, will save file "1"
+* Continue with all pages
+* LOAD "BUILD-SLIDES",8
+* LIST -40
+* Edit variables to match page count and destinations
+* RUN, confirm with Y, otherwise N
+* Wait for slides to build
+* LOAD appropriate slides program for your computer, and RUN
+* NOTE: RLEPLAYER*.ML require to be loaded from default load address, cannot be moved, so careful running with other extensions/tools as it may not work
+* NOTE: RLEPLAYER*.ML and encoder (LORES.ML) assume default screen/color addresses, others won't work
