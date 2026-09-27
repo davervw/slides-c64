@@ -28,17 +28,13 @@ delete rleplayer.ml
 delete rleplayer128.ml
 delete rleplayerted.ml
 delete rleplayer.asm
-delete rleplayer128.asm
-delete rleplayerted.asm
 delete license
+write LICENSE license,s
+write code/lores.asm lores.asm,s
 write build/lores.ml.prg lores.ml
 write build/rleplayer.ml.prg rleplayer.ml
 write build/rleplayer128.ml.prg rleplayer128.ml
 write build/rleplayerted.ml.prg rleplayerted.ml
-write code/lores.asm lores.asm,s
 write code/rleplayer.asm rleplayer.asm,s
-write code/rleplayer128.asm rleplayer128.asm,s
-write code/rleplayerted.asm rleplayerted.asm,s
-write LICENSE license,s
 EOF
 [ $? -eq 0 ] && ${VICE}/x64sc.exe -moncommands build/lores.labels build/slides.d64
