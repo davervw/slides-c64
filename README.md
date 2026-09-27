@@ -97,8 +97,8 @@ Instructions:
 * LOAD appropriate slides program for your computer, and RUN
 * NOTE: RLEPLAYER*.ML require to be loaded from default load address, cannot be moved, so careful running with other extensions/tools as it may not work
 * NOTE: RLEPLAYER*.ML and encoder (LORES.ML) assume default screen/color addresses, others won't work
-* DELETE unneeded files from disk
 * player keystrokes are self discoverable (I hope) otherwise see source code for any secrets
+* DELETE unneeded files from disk
 
 ````
 OPEN 15,8,15,"S0:?":CLOSE 15
