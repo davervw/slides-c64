@@ -5,7 +5,7 @@ result=$?
 cat build/build.err
 [ ${result} -eq 0 ] || exit 1
 rm build/build.err
-${ACME}/acme.exe -DTARGET_C64=1 -f cbm -l build/rleplayer.labels -r build/rleplayer.lst -o build/rleplayer.ml.prg code/rleplayer.asm 2> build/build.err
+${ACME}/acme.exe -DTARGET_C64=1 -f cbm -l build/rleplayer64.labels -r build/rleplayer64.lst -o build/rleplayer64.ml.prg code/rleplayer.asm 2> build/build.err
 result=$?
 cat build/build.err
 [ ${result} -eq 0 ] || exit 1
@@ -24,7 +24,7 @@ rm build/build.err
 attach build/slides.d64
 delete lores.ml
 delete lores.asm
-delete rleplayer.ml
+delete rleplayer64.ml
 delete rleplayer128.ml
 delete rleplayerted.ml
 delete rleplayer.asm
@@ -32,7 +32,7 @@ delete license
 write LICENSE license,s
 write code/lores.asm lores.asm,s
 write build/lores.ml.prg lores.ml
-write build/rleplayer.ml.prg rleplayer.ml
+write build/rleplayer64.ml.prg rleplayer64.ml
 write build/rleplayer128.ml.prg rleplayer128.ml
 write build/rleplayerted.ml.prg rleplayerted.ml
 write code/rleplayer.asm rleplayer.asm,s
