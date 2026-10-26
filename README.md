@@ -32,6 +32,7 @@ Slides are defined in BASIC DATA statements.
     DATA "!-" : REM new slide
     DATA "!C" : REM center align text
     DATA "!L" : REM left align text
+    DATA "!R" : REM right align text
     DATA "!E" : REM end of slides
     DATA "TEXT" : REM display string TEXT using large 4x4 font
     DATA "-TEXT" : REM use standard size font
